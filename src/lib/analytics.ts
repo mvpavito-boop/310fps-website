@@ -36,6 +36,12 @@ export const ANALYTICS_GOALS = {
     aboutCatalog: "about_catalog",
     aboutMobileCtaPrimary: "about_mobile_cta_primary",
     aboutMobileCtaTelegram: "about_mobile_cta_telegram",
+
+    /* Страница «О нас» — Версия 2 */
+    aboutV2TelegramHero: "about_v2_telegram_hero",
+    aboutV2CatalogHero: "about_v2_catalog_hero",
+    aboutV2TelegramFinal: "about_v2_telegram_final",
+    aboutV2CatalogFinal: "about_v2_catalog_final",
 } as const;
 
 export type AnalyticsGoal = (typeof ANALYTICS_GOALS)[keyof typeof ANALYTICS_GOALS];

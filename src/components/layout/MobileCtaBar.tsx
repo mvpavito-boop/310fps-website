@@ -17,7 +17,7 @@ interface PageCtaConfig {
 }
 
 function getPageConfig(pathname: string): PageCtaConfig {
-    if (pathname === "/about") {
+    if (pathname === "/about" || pathname === "/about/v2") {
         return {
             primaryLabel: "Написать в Telegram",
             primaryHref: siteConfig.telegramDirectUrl,
@@ -50,19 +50,21 @@ interface MobileCtaBarProps {
  * Липкая мобильная панель: видна сразу при открытии страницы, чтобы
  * пользователь понимал следующий шаг, и прячется у футера, где свои CTA.
  *
- * На /configurator панель дублирует собственную CTA страницы, поэтому
- * скрыта. На /about возвращена с целями about_mobile_cta_*.
+ * На /configurator панель дублирует собственную CTA страницы через пропсы.
  */
-export function MobileCtaBar({
-    primaryLabel: primaryLabelProp,
-    primaryHref: primaryHrefProp,
-    onPrimaryClick,
-    secondaryLabel: secondaryLabelProp,
-    secondaryHref: secondaryHrefProp,
-}: MobileCtaBarProps = {}) {
+export function MobileCtaBar(props: MobileCtaBarProps = {}) {
     const [visible, setVisible] = useState(false);
     const pathname = usePathname();
     const pageConfig = getPageConfig(pathname);
+
+    const config = {
+        primaryLabel: props.primaryLabel ?? pageConfig.primaryLabel,
+        primaryHref: props.primaryHref ?? pageConfig.primaryHref,
+        primaryGoal: pageConfig.primaryGoal,
+        secondaryLabel: props.secondaryLabel ?? pageConfig.secondaryLabel,
+        secondaryHref: props.secondaryHref !== undefined ? props.secondaryHref : pageConfig.secondaryHref,
+        telegramGoal: pageConfig.telegramGoal,
+    };
 
     useEffect(() => {
         let footerSeen = false;
@@ -85,17 +87,9 @@ export function MobileCtaBar({
         };
     }, []);
 
-    /* На /configurator своя панель с итоговой ценой — не дублируем. */
-    if (pathname === "/configurator" && !onPrimaryClick) return null;
+    /* На /configurator своя панель с итоговой ценой — не дублируем, если не переданы пропсы. */
+    if (pathname === "/configurator" && !props.onPrimaryClick) return null;
 
-    const primaryLabel = primaryLabelProp ?? pageConfig.primaryLabel;
-    const primaryHref = primaryHrefProp ?? pageConfig.primaryHref;
-    const secondaryLabel = secondaryLabelProp ?? pageConfig.secondaryLabel;
-    const secondaryHref = secondaryHrefProp ?? pageConfig.secondaryHref;
-    const primaryGoal = onPrimaryClick ? ANALYTICS_GOALS.mobileCtaPrimary : pageConfig.primaryGoal;
-    const telegramGoal = onPrimaryClick ? ANALYTICS_GOALS.mobileCtaTelegram : pageConfig.telegramGoal;
-
-    const isExternalPrimary = primaryHref.startsWith("http");
     const primaryCls =
         "relative flex-1 overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-white shadow-ember active:scale-[0.98]";
 
@@ -109,32 +103,32 @@ export function MobileCtaBar({
             aria-hidden={!visible}
         >
             <div className="flex items-stretch gap-2.5 px-3.5 py-2.5">
-                {onPrimaryClick ? (
-                    <button onClick={onPrimaryClick} className={primaryCls} data-analytics-goal={primaryGoal}>
-                        {primaryLabel}
+                {props.onPrimaryClick ? (
+                    <button type="button" onClick={props.onPrimaryClick} className={primaryCls} data-analytics-goal={config.primaryGoal}>
+                        {config.primaryLabel}
                     </button>
-                ) : isExternalPrimary ? (
+                ) : config.primaryHref.startsWith("http") ? (
                     <a
-                        href={primaryHref}
+                        href={config.primaryHref}
                         target="_blank"
                         rel="noopener noreferrer"
                         className={primaryCls}
-                        data-analytics-goal={primaryGoal}
+                        data-analytics-goal={config.primaryGoal}
                     >
-                        {primaryLabel}
+                        {config.primaryLabel}
                     </a>
                 ) : (
-                    <Link href={primaryHref} className={primaryCls} data-analytics-goal={primaryGoal}>
-                        {primaryLabel}
+                    <Link href={config.primaryHref} className={primaryCls} data-analytics-goal={config.primaryGoal}>
+                        {config.primaryLabel}
                     </Link>
                 )}
 
-                {secondaryHref && (
+                {config.secondaryHref && (
                     <Link
-                        href={secondaryHref}
+                        href={config.secondaryHref}
                         className="corners rounded-md bg-white/[0.04] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-bone active:scale-[0.98]"
                     >
-                        {secondaryLabel}
+                        {config.secondaryLabel}
                     </Link>
                 )}
 
@@ -143,7 +137,7 @@ export function MobileCtaBar({
                     target="_blank"
                     rel="noopener noreferrer"
                     aria-label="Написать в Telegram"
-                    data-analytics-goal={telegramGoal}
+                    data-analytics-goal={config.telegramGoal}
                     className="flex h-[40px] w-12 items-center justify-center rounded-md border border-ember/40 bg-ember/10 text-ember active:scale-[0.94]"
                 >
                     <Icon name="send" className="h-[18px] w-[18px]" />
