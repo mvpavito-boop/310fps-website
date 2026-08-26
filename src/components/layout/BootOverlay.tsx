@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 /**
  * Брендовая заставка на первый вход в сессию: лого, вордмарк и янтарный shimmer.
@@ -27,21 +27,40 @@ const SESSION_KEY = "310fps:booted";
 
 export const APP_READY_EVENT = "app:ready";
 
+function readBootedFlag(): boolean {
+    try {
+        return sessionStorage.getItem(SESSION_KEY) === "1";
+    } catch {
+        return false;
+    }
+}
+
+function writeBootedFlag() {
+    try {
+        sessionStorage.setItem(SESSION_KEY, "1");
+    } catch {
+        /* ignore: private mode / disabled storage */
+    }
+}
+
 export function BootOverlay() {
     const [visible, setVisible] = useState(false);
     const [fading, setFading] = useState(false);
+    const timers = useRef({ ceiling: 0, fade: 0, remove: 0 });
 
     useEffect(() => {
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-        const alreadyBooted = sessionStorage.getItem(SESSION_KEY) === "1";
+        const alreadyBooted = readBootedFlag();
 
         /* Без заставки кинетика заголовка всё равно должна стартовать */
         if (reducedMotion || alreadyBooted) {
+            setVisible(false);
+            setFading(false);
             window.dispatchEvent(new Event(APP_READY_EVENT));
             return;
         }
 
-        sessionStorage.setItem(SESSION_KEY, "1");
+        writeBootedFlag();
         /* Показ решается по sessionStorage и matchMedia — данным, доступным
            только на клиенте. Читать их в рендере нельзя: разметка сервера и
            клиента разойдётся, и повторный визит поймает вспышку заставки. */
@@ -49,31 +68,33 @@ export function BootOverlay() {
         setVisible(true);
 
         const shownAt = performance.now();
-        let fadeTimer = 0;
-        let removeTimer = 0;
         let done = false;
+
+        const clearAll = () => {
+            clearTimeout(timers.current.ceiling);
+            clearTimeout(timers.current.fade);
+            clearTimeout(timers.current.remove);
+        };
 
         const finish = () => {
             if (done) return;
             done = true;
             const wait = Math.max(0, MIN_VISIBLE_MS - (performance.now() - shownAt));
-            fadeTimer = window.setTimeout(() => {
+            timers.current.fade = window.setTimeout(() => {
                 setFading(true);
                 window.dispatchEvent(new Event(APP_READY_EVENT));
-                removeTimer = window.setTimeout(() => setVisible(false), FADE_MS);
+                timers.current.remove = window.setTimeout(() => setVisible(false), FADE_MS);
             }, wait);
         };
 
         if (document.readyState === "complete") finish();
         else window.addEventListener("load", finish, { once: true });
 
-        const ceiling = window.setTimeout(finish, MAX_VISIBLE_MS);
+        timers.current.ceiling = window.setTimeout(finish, MAX_VISIBLE_MS);
 
         return () => {
             window.removeEventListener("load", finish);
-            clearTimeout(ceiling);
-            clearTimeout(fadeTimer);
-            clearTimeout(removeTimer);
+            clearAll();
         };
     }, []);
 

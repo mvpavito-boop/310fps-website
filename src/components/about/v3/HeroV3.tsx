@@ -1,14 +1,118 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
+import { APP_READY_EVENT } from "@/components/layout/BootOverlay";
 import { SectionLabel } from "@/components/ui/primitives";
-import { Reveal } from "@/components/ui/primitives";
+
+/* Видео-фон: на десктопе 16:9, на мобильном — родная вертикальная версия.
+   Источник ставится после монтирования, чтобы телефон не тянул десктопный файл. */
+function HeroVideo() {
+    const ref = useRef<HTMLVideoElement>(null);
+
+    useEffect(() => {
+        const video = ref.current;
+        if (!video) return;
+
+        const mobile = window.matchMedia("(max-width: 1023px)").matches;
+        video.poster = mobile ? "/videos/hero-mobile-poster.jpg" : "/videos/hero-poster.jpg";
+        video.src = mobile ? "/videos/hero-mobile-loop.mp4" : "/videos/hero-loop.mp4";
+
+        /* Автовоспроизведение может быть отклонено браузером — тогда остаётся постер */
+        video.play().catch(() => undefined);
+    }, []);
+
+    return (
+        <video
+            ref={ref}
+            className="h-full w-full object-cover"
+            poster="/videos/hero-poster.jpg"
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="none"
+            aria-hidden
+            tabIndex={-1}
+        />
+    );
+}
+
+/* Кинетическое слово: побуквенный подъём из маски */
+function KineticWord({ word, baseDelay }: { word: string; baseDelay: number }) {
+    return (
+        <span className="inline-block whitespace-nowrap" aria-label={word}>
+            {word.split("").map((char, index) => (
+                <span
+                    key={index}
+                    aria-hidden
+                    className="kinetic-letter"
+                    style={{ animationDelay: `${baseDelay + index * 34}ms` }}
+                >
+                    {char}
+                </span>
+            ))}
+        </span>
+    );
+}
+
+const FACTS = [
+    { label: "СПБ", marker: "59.9343° N" },
+    { label: "2000+ систем", marker: "SINCE 2017" },
+    { label: "24ч стресс-тест", marker: "24H BURN-IN" },
+];
 
 export function HeroV3() {
+    const bgRef = useRef<HTMLDivElement>(null);
+    const fgRef = useRef<HTMLDivElement>(null);
+    const [play, setPlay] = useState(false);
+
+    /* Кинетика стартует в момент растворения заставки */
+    useEffect(() => {
+        const onReady = () => setPlay(true);
+        window.addEventListener(APP_READY_EVENT, onReady, { once: true });
+        const failsafe = window.setTimeout(onReady, 2200);
+        return () => {
+            window.removeEventListener(APP_READY_EVENT, onReady);
+            clearTimeout(failsafe);
+        };
+    }, []);
+
+    /* Лёгкий параллакс фона */
+    useEffect(() => {
+        if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+
+        let raf = 0;
+        const onScroll = () => {
+            cancelAnimationFrame(raf);
+            raf = requestAnimationFrame(() => {
+                const y = window.scrollY;
+                if (y > window.innerHeight * 1.4) return;
+                if (bgRef.current) bgRef.current.style.transform = `translate3d(0, ${y * 0.25}px, 0)`;
+                if (fgRef.current) fgRef.current.style.transform = `translate3d(0, ${y * -0.04}px, 0)`;
+            });
+        };
+
+        window.addEventListener("scroll", onScroll, { passive: true });
+        onScroll();
+        return () => {
+            window.removeEventListener("scroll", onScroll);
+            cancelAnimationFrame(raf);
+        };
+    }, []);
+
     return (
-        <section className="relative flex min-h-[70svh] flex-col justify-end overflow-hidden pt-24 lg:min-h-[80svh]">
+        <section
+            className={`relative flex min-h-[100svh] flex-col justify-end overflow-hidden pt-24 lg:pt-32 ${
+                play ? "kinetic-play" : ""
+            }`}
+        >
             {/* Background */}
-            <div className="absolute inset-0">
+            <div
+                ref={bgRef}
+                className="absolute -inset-y-24 inset-x-0 will-change-transform"
+                aria-hidden
+            >
                 <Image
                     src="/images/page-bg-desktop.jpg"
                     alt=""
@@ -18,46 +122,82 @@ export function HeroV3() {
                     className="object-cover"
                     aria-hidden
                 />
-                <div className="absolute inset-0 bg-ink/80" aria-hidden />
-                <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/60 to-ink/30" aria-hidden />
+                <HeroVideo />
+                <div className="absolute inset-0 bg-ink/70" aria-hidden />
+                <div className="absolute inset-0 bg-gradient-to-t from-ink via-ink/55 to-ink/25" aria-hidden />
+                <div
+                    className="absolute inset-0"
+                    style={{
+                        background:
+                            "radial-gradient(ellipse 90% 75% at 50% 42%, transparent 40%, rgba(5,5,7,0.55) 100%)",
+                    }}
+                    aria-hidden
+                />
             </div>
 
-            <div className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-12 lg:px-8 lg:pb-20">
-                <Reveal>
-                    <SectionLabel index="00" text="О лаборатории" className="text-ash" />
-                </Reveal>
-
-                <Reveal delay={100}>
-                    <h1 className="mt-5 max-w-4xl font-display text-[clamp(1.8rem,7vw,4.5rem)] font-extrabold uppercase leading-[1.05] tracking-tight text-bone">
-                        Лаборатория,{" "}
-                        <span className="text-gradient">а не конвейер</span>
-                    </h1>
-                </Reveal>
-
-                <Reveal delay={200}>
-                    <p className="mt-6 max-w-2xl text-[15px] leading-relaxed text-bone/70 lg:text-[17px]">
-                        С 2017 года один мастер собирает игровые ПК в Санкт-Петербурге.
-                        Более 2000 систем — каждая со стресс-тестом 24 часа и паспортом.
-                    </p>
-                </Reveal>
-
-                <Reveal delay={300}>
-                    <div className="mt-8 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ash">
-                        <span className="flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-ember" />
-                            СПБ
-                        </span>
-                        <span className="flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-ember" />
-                            2000+ систем
-                        </span>
-                        <span className="flex items-center gap-2">
-                            <span className="h-1.5 w-1.5 rounded-full bg-ember" />
-                            24ч стресс-тест
-                        </span>
-                    </div>
-                </Reveal>
+            {/* Floating tech markers */}
+            <div className="pointer-events-none absolute inset-0" aria-hidden>
+                <div className="absolute left-[8%] top-[22%] hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ash/60 lg:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-ember/70" />
+                    SPB · 59.9343° N
+                </div>
+                <div className="absolute right-[10%] top-[30%] hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ash/60 lg:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-ember/70" />
+                    SINCE 2017
+                </div>
+                <div className="absolute bottom-[38%] right-[12%] hidden items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ash/60 lg:flex">
+                    <span className="h-1.5 w-1.5 rounded-full bg-ember/70" />
+                    24H STRESS TEST
+                </div>
             </div>
+
+            <div
+                ref={fgRef}
+                className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-14 pt-32 will-change-transform lg:px-8 lg:pb-24"
+            >
+                <SectionLabel index="00" text="О лаборатории" className="text-ash" />
+
+                <h1 className="mt-6 max-w-5xl font-display text-[clamp(2rem,8vw,6rem)] font-extrabold uppercase leading-[1.02] tracking-tight text-bone lg:mt-8">
+                    <span className="block overflow-hidden pb-[0.06em]">
+                        <KineticWord word="Лаборатория," baseDelay={150} />
+                    </span>
+                    <span className="block overflow-hidden pb-[0.08em]">
+                        <span className="kinetic-word text-gradient" style={{ animationDelay: "750ms" }}>
+                            а не конвейер
+                        </span>
+                    </span>
+                </h1>
+
+                <p
+                    className={`mt-7 max-w-2xl text-[15px] leading-relaxed text-bone/70 transition-all duration-1000 lg:mt-9 lg:text-[17px] ${
+                        play ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+                    }`}
+                    style={{ transitionDelay: "950ms" }}
+                >
+                    С 2017 года один мастер собирает игровые ПК в Санкт-Петербурге.
+                    Более 2000 систем — каждая со стресс-тестом 24 часа и паспортом.
+                </p>
+
+                <div
+                    className={`mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ash transition-all duration-1000 ${
+                        play ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
+                    }`}
+                    style={{ transitionDelay: "1100ms" }}
+                >
+                    {FACTS.map((fact) => (
+                        <span key={fact.label} className="flex items-center gap-2">
+                            <span className="h-1.5 w-1.5 rounded-full bg-ember" />
+                            {fact.label}
+                        </span>
+                    ))}
+                </div>
+            </div>
+
+            {/* Bottom scanline */}
+            <div
+                className="pointer-events-none absolute bottom-0 left-0 right-0 h-px bg-gradient-to-r from-transparent via-ember/40 to-transparent"
+                aria-hidden
+            />
         </section>
     );
 }
