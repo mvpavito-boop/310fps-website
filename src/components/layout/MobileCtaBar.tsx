@@ -17,7 +17,7 @@ interface PageCtaConfig {
 }
 
 function getPageConfig(pathname: string): PageCtaConfig {
-    if (pathname === "/about" || pathname === "/about/v2") {
+    if (pathname === "/about" || pathname === "/about/v2" || pathname === "/about/v3") {
         return {
             primaryLabel: "Написать в Telegram",
             primaryHref: siteConfig.telegramDirectUrl,
