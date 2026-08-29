@@ -10,9 +10,8 @@ import { useEffect, useRef, useState } from "react";
  *
  * 1. Это overlay поверх уже отрисованной страницы. Контент отдаётся сервером
  *    и existует под заставкой — она ничего не блокирует и не задерживает.
- * 2. Уходит по готовности (`window.load`), а не по фиксированному таймеру.
- *    Минимум 900 мс нужен, чтобы shimmer успел прочитаться, потолок 1800 мс —
- *    чтобы медленная сеть не превращала заставку в стену.
+ * 2. Уходит по готовности (`window.load`), но не раньше MIN_VISIBLE_MS.
+ *    Потолок MAX_VISIBLE_MS — чтобы медленная сеть не превращала заставку в стену.
  * 3. Показывается один раз за сессию. Внутренние переходы и возврат на сайт
  *    происходят мгновенно.
  *
@@ -46,7 +45,8 @@ function writeBootedFlag() {
 export function BootOverlay() {
     const [visible, setVisible] = useState(false);
     const [fading, setFading] = useState(false);
-    const timers = useRef({ ceiling: 0, fade: 0, remove: 0 });
+    const timers = useRef({ min: 0, max: 0, remove: 0 });
+    const finishedRef = useRef(false);
 
     useEffect(() => {
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -60,41 +60,48 @@ export function BootOverlay() {
             return;
         }
 
-        writeBootedFlag();
-        /* Показ решается по sessionStorage и matchMedia — данным, доступным
-           только на клиенте. Читать их в рендере нельзя: разметка сервера и
-           клиента разойдётся, и повторный визит поймает вспышку заставки. */
+        /* Флаг сессии ставится только когда заставка реально отыграла.
+           Это защищает от React Strict Mode: при двойном монтировании в dev
+           второй проход ещё не видит флага, поэтому лоадер не пропадает
+           раньше времени. */
+        finishedRef.current = false;
         // eslint-disable-next-line react-hooks/set-state-in-effect
         setVisible(true);
 
         const shownAt = performance.now();
-        let done = false;
-
-        const clearAll = () => {
-            clearTimeout(timers.current.ceiling);
-            clearTimeout(timers.current.fade);
-            clearTimeout(timers.current.remove);
-        };
+        let loadFired = false;
 
         const finish = () => {
-            if (done) return;
-            done = true;
-            const wait = Math.max(0, MIN_VISIBLE_MS - (performance.now() - shownAt));
-            timers.current.fade = window.setTimeout(() => {
-                setFading(true);
-                window.dispatchEvent(new Event(APP_READY_EVENT));
-                timers.current.remove = window.setTimeout(() => setVisible(false), FADE_MS);
-            }, wait);
+            if (finishedRef.current) return;
+            finishedRef.current = true;
+            writeBootedFlag();
+            timers.current.remove = window.setTimeout(() => setVisible(false), FADE_MS);
+            setFading(true);
+            window.dispatchEvent(new Event(APP_READY_EVENT));
         };
 
-        if (document.readyState === "complete") finish();
-        else window.addEventListener("load", finish, { once: true });
+        const scheduleFinish = () => {
+            if (loadFired || finishedRef.current) return;
+            loadFired = true;
+            const elapsed = performance.now() - shownAt;
+            const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
+            timers.current.min = window.setTimeout(finish, wait);
+        };
 
-        timers.current.ceiling = window.setTimeout(finish, MAX_VISIBLE_MS);
+        if (document.readyState === "complete") scheduleFinish();
+        else window.addEventListener("load", scheduleFinish, { once: true });
+
+        timers.current.max = window.setTimeout(() => {
+            if (!loadFired) window.removeEventListener("load", scheduleFinish);
+            scheduleFinish();
+        }, MAX_VISIBLE_MS);
 
         return () => {
-            window.removeEventListener("load", finish);
-            clearAll();
+            window.removeEventListener("load", scheduleFinish);
+            clearTimeout(timers.current.min);
+            clearTimeout(timers.current.max);
+            clearTimeout(timers.current.remove);
+            if (finishedRef.current) writeBootedFlag();
         };
     }, []);
 

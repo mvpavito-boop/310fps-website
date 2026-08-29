@@ -5,29 +5,38 @@ import Image from "next/image";
 import { APP_READY_EVENT } from "@/components/layout/BootOverlay";
 import { SectionLabel } from "@/components/ui/primitives";
 
-/* Видео-фон: на десктопе 16:9, на мобильном — родная вертикальная версия.
-   Источник ставится после монтирования, чтобы телефон не тянул десктопный файл. */
+/* Видео-фон: показываем только на десктопе, загружаем лениво после
+   интерактивности, чтобы не блокировать первую отрисовку hero. */
 function HeroVideo() {
     const ref = useRef<HTMLVideoElement>(null);
+    const [src, setSrc] = useState<string | null>(null);
 
     useEffect(() => {
+        const mobile = window.matchMedia("(max-width: 1023px)").matches;
+        if (mobile) return;
+
+        /* Откладываем загрузку видео до следующего кадра после первой отрисовки */
+        const raf = requestAnimationFrame(() => {
+            setSrc("/videos/hero-loop.mp4");
+        });
+        return () => cancelAnimationFrame(raf);
+    }, []);
+
+    useEffect(() => {
+        if (!src) return;
         const video = ref.current;
         if (!video) return;
-
-        const mobile = window.matchMedia("(max-width: 1023px)").matches;
-        video.poster = mobile ? "/videos/hero-mobile-poster.jpg" : "/videos/hero-poster.jpg";
-        video.src = mobile ? "/videos/hero-mobile-loop.mp4" : "/videos/hero-loop.mp4";
-
-        /* Автовоспроизведение может быть отклонено браузером — тогда остаётся постер */
         video.play().catch(() => undefined);
-    }, []);
+    }, [src]);
+
+    if (!src) return null;
 
     return (
         <video
             ref={ref}
             className="h-full w-full object-cover"
             poster="/videos/hero-poster.jpg"
-            autoPlay
+            src={src}
             muted
             loop
             playsInline
@@ -47,7 +56,7 @@ function KineticWord({ word, baseDelay }: { word: string; baseDelay: number }) {
                     key={index}
                     aria-hidden
                     className="kinetic-letter"
-                    style={{ animationDelay: `${baseDelay + index * 34}ms` }}
+                    style={{ animationDelay: `${baseDelay + index * 25}ms` }}
                 >
                     {char}
                 </span>
@@ -159,30 +168,30 @@ export function HeroV3() {
 
                 <h1 className="mt-6 max-w-5xl font-display text-[clamp(1.75rem,7vw,6rem)] font-extrabold uppercase leading-[1.02] tracking-tight text-bone lg:mt-8">
                     <span className="block overflow-hidden pb-[0.06em]">
-                        <KineticWord word="Один мастер" baseDelay={150} />
+                        <KineticWord word="Один мастер" baseDelay={100} />
                     </span>
                     <span className="block overflow-hidden pb-[0.08em]">
-                        <span className="kinetic-word text-gradient" style={{ animationDelay: "750ms" }}>
+                        <span className="kinetic-word text-gradient" style={{ animationDelay: "500ms" }}>
                             за сборку
                         </span>
                     </span>
                 </h1>
 
                 <p
-                    className={`mt-7 max-w-2xl text-[15px] leading-relaxed text-bone/70 transition-all duration-1000 lg:mt-9 lg:text-[17px] ${
+                    className={`mt-7 max-w-2xl text-[15px] leading-relaxed text-bone/70 transition-all duration-700 lg:mt-9 lg:text-[17px] ${
                         play ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
                     }`}
-                    style={{ transitionDelay: "950ms" }}
+                    style={{ transitionDelay: "650ms" }}
                 >
                     С 2017 года собираем игровые ПК в Санкт-Петербурге вручную.
                     Более 2000 систем — каждая проходит 24-часовой стресс-тест и получает паспорт.
                 </p>
 
                 <div
-                    className={`mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ash transition-all duration-1000 ${
+                    className={`mt-10 flex flex-wrap items-center gap-x-6 gap-y-2 border-t border-white/10 pt-6 font-mono text-[10px] uppercase tracking-[0.18em] text-ash transition-all duration-700 ${
                         play ? "translate-y-0 opacity-100" : "translate-y-8 opacity-0"
                     }`}
-                    style={{ transitionDelay: "1100ms" }}
+                    style={{ transitionDelay: "800ms" }}
                 >
                     {FACTS.map((fact) => (
                         <span key={fact.label} className="flex items-center gap-2">
