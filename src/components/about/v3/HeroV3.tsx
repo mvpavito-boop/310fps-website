@@ -103,7 +103,7 @@ export function HeroV3() {
 
     return (
         <section
-            className={`relative flex min-h-[100svh] flex-col justify-end overflow-hidden pt-24 lg:pt-32 ${
+            className={`relative flex min-h-[calc(100svh-64px)] flex-col justify-end overflow-hidden pt-24 lg:min-h-[100svh] lg:pt-32 ${
                 play ? "kinetic-play" : ""
             }`}
         >
@@ -153,17 +153,17 @@ export function HeroV3() {
 
             <div
                 ref={fgRef}
-                className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-14 pt-32 will-change-transform lg:px-8 lg:pb-24"
+                className="relative z-10 mx-auto w-full max-w-7xl px-5 pb-[88px] pt-32 will-change-transform lg:px-8 lg:pb-24"
             >
                 <SectionLabel index="00" text="О лаборатории" className="text-ash" />
 
-                <h1 className="mt-6 max-w-5xl font-display text-[clamp(2rem,8vw,6rem)] font-extrabold uppercase leading-[1.02] tracking-tight text-bone lg:mt-8">
+                <h1 className="mt-6 max-w-5xl font-display text-[clamp(1.75rem,7vw,6rem)] font-extrabold uppercase leading-[1.02] tracking-tight text-bone lg:mt-8">
                     <span className="block overflow-hidden pb-[0.06em]">
-                        <KineticWord word="Лаборатория," baseDelay={150} />
+                        <KineticWord word="Один мастер" baseDelay={150} />
                     </span>
                     <span className="block overflow-hidden pb-[0.08em]">
                         <span className="kinetic-word text-gradient" style={{ animationDelay: "750ms" }}>
-                            а не конвейер
+                            за сборку
                         </span>
                     </span>
                 </h1>
@@ -174,8 +174,8 @@ export function HeroV3() {
                     }`}
                     style={{ transitionDelay: "950ms" }}
                 >
-                    С 2017 года один мастер собирает игровые ПК в Санкт-Петербурге.
-                    Более 2000 систем — каждая со стресс-тестом 24 часа и паспортом.
+                    С 2017 года собираем игровые ПК в Санкт-Петербурге вручную.
+                    Более 2000 систем — каждая проходит 24-часовой стресс-тест и получает паспорт.
                 </p>
 
                 <div

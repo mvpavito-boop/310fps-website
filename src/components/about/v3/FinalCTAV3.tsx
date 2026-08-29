@@ -16,7 +16,7 @@ export function FinalCTAV3() {
                 </Reveal>
                 <Reveal delay={100}>
                     <p className="mt-5 text-[15px] leading-relaxed text-bone/60">
-                        Расскажите, для чего нужен ПК. Мастер подберёт конфигурацию и рассчитает смету.
+                        Расскажите, для чего нужен ПК. Наш мастер подберёт конфигурацию и рассчитает смету.
                     </p>
                 </Reveal>
                 <Reveal delay={200}>
