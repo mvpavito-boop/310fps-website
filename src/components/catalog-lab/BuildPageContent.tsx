@@ -167,10 +167,10 @@ function SpecGroup({
               <div key={label} className="flex items-start gap-3.5">
                 <IconTile name={icon} className="h-9 w-9" iconClassName="h-4 w-4" />
                 <div className="min-w-0">
-                  <div className="font-mono text-[9px] uppercase tracking-[0.2em] text-ash">{label}</div>
-                  <div className="mt-0.5 text-[13px] font-semibold text-bone">{value}</div>
+                  <div className="text-xs text-ash">{label}</div>
+                  <div className="mt-1 text-sm font-semibold text-bone">{value}</div>
                   {SPEC_NOTES[icon] && (
-                    <div className="mt-0.5 text-[11px] leading-snug text-ash/80">{SPEC_NOTES[icon]}</div>
+                    <div className="mt-1 text-xs leading-relaxed text-ash">{SPEC_NOTES[icon]}</div>
                   )}
                 </div>
               </div>
@@ -260,20 +260,30 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
         <section className="relative overflow-hidden pb-16 pt-[104px] lg:pb-24 lg:pt-[124px]">
           <div className="mx-auto max-w-7xl px-5 lg:px-8">
             <Reveal>
-              <nav className="flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-[0.2em] text-ash">
+              <nav aria-label="Хлебные крошки" className="flex flex-wrap items-center gap-2 text-xs text-ash">
                 <Link href="/catalog" className="transition-colors hover:text-flame">
                   Каталог сборок
                 </Link>
-                <span className="text-ember">/</span>
-                <span className="text-ash/70">{build.series} Series</span>
                 <span className="text-ember">/</span>
                 <span className="text-bone">{build.name}</span>
               </nav>
             </Reveal>
 
-            <div className="mt-7 grid items-start gap-8 lg:grid-cols-[1.05fr_1fr] lg:gap-12">
+            <div className="mt-5 grid items-start gap-6 lg:mt-7 lg:grid-cols-[1.05fr_1fr] lg:gap-x-12 lg:gap-y-6">
+              <Reveal className="lg:col-start-2 lg:row-start-1">
+                <h1 className="font-display text-[clamp(1.9rem,4.5vw,3.2rem)] font-bold uppercase leading-[1.1] tracking-tight text-bone">
+                  {build.name}
+                </h1>
+                <p className="mt-3 max-w-md text-[15px] leading-relaxed text-ash">
+                  {build.desc}
+                </p>
+                <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1 lg:hidden">
+                  <p className="font-mono text-2xl font-semibold text-flame">{formatPrice(build.price)}</p>
+                  <span className="text-xs text-ash">Оплата после согласования</span>
+                </div>
+              </Reveal>
               {/* ---------- Галерея ---------- */}
-              <Reveal delay={80}>
+              <Reveal delay={80} className="lg:col-start-1 lg:row-span-2 lg:row-start-1">
                 <div>
                   <div className="relative overflow-hidden rounded-xl border border-line">
                     <Image
@@ -331,24 +341,12 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
               </Reveal>
 
               {/* ---------- Покупка ---------- */}
-              <div className="flex min-w-0 flex-col">
-                <Reveal delay={120}>
-                  <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-ember">
-                    {build.series} Series
-                  </div>
-                  <h1 className="mt-3 font-display text-[clamp(1.9rem,4.5vw,3.2rem)] font-bold uppercase leading-[1.05] tracking-tight text-bone">
-                    {build.name}
-                  </h1>
-                  <p className="mt-4 max-w-md text-balance text-[14px] leading-relaxed text-ash">
-                    {build.desc}
-                  </p>
-                </Reveal>
-
+              <div className="flex min-w-0 flex-col lg:col-start-2 lg:row-start-2">
                 {/* Варианты линейки */}
                 {siblings.length > 1 && (
                   <Reveal delay={160}>
-                    <div className="mt-6">
-                      <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-ash">
+                    <div>
+                      <div className="text-xs text-ash">
                         Варианты линейки
                       </div>
                       <div className="mt-2.5 grid grid-cols-3 gap-2">
@@ -366,7 +364,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                             <span className="block font-display text-[10px] font-bold uppercase leading-snug tracking-[0.04em] text-bone sm:text-[11px] sm:tracking-[0.06em]">
                               {s.name}
                             </span>
-                            <span className="mt-0.5 block font-mono text-[10px] font-semibold text-gradient">
+                            <span className="mt-1 block font-mono text-xs font-semibold text-flame">
                               {formatPrice(s.price)}
                             </span>
                           </Link>
@@ -381,18 +379,18 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                   <div className="mt-7 rounded-xl border border-ember/35 bg-panel/60 p-5 sm:p-6">
                     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                       <div>
-                        <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-ash">
+                        <div className="text-xs text-ash">
                           Полная сборка
                         </div>
                         <div className="mt-2 whitespace-nowrap font-mono text-3xl font-bold text-gradient sm:text-4xl lg:text-[2.75rem] lg:leading-none">
                           {formatPrice(build.price)}
                         </div>
                       </div>
-                      <div className="pb-1 font-mono text-[11px] uppercase tracking-[0.1em] text-ash">
+                      <div className="pb-1 text-sm text-ash">
                         Оплата после согласования
                       </div>
                     </div>
-                    <div className="mt-3 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-ash">
+                    <div className="mt-3 flex items-center gap-2 text-xs text-ash">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
                       Срок сборки согласуем с вами
                     </div>

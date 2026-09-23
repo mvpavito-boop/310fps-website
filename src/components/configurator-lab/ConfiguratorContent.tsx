@@ -15,7 +15,7 @@ import {
   Icon,
   IconTile,
 } from '@/components/ui/lab-icons'
-import { EmberButton, Reveal, SectionLabel } from '@/components/ui/primitives'
+import { EmberButton, Reveal } from '@/components/ui/primitives'
 import {
   DEFAULT_CONFIGURATOR_BUILD_ID,
   formatPrice,
@@ -295,16 +295,16 @@ function ComponentRow({
       data-component-id={comp.id}
       data-category={category}
       className={cn(
-        'group flex cursor-pointer items-center justify-between gap-2 rounded-lg border px-3 py-2.5 transition-all duration-300 sm:px-4 sm:py-3',
+        'group grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-1 rounded-lg border px-3 py-3 transition-colors duration-300 sm:px-4',
         selected ? 'border-ember/50 bg-ember/[0.08]' : 'border-line bg-ink/40 hover:border-white/20 hover:bg-white/[0.03]',
       )}
     >
       <button type="button" onClick={onSelect} aria-pressed={selected} aria-label={`${comp.name}: ${selected ? 'выбрано' : 'выбрать'}`}
-        className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left">
+        className="row-span-2 flex min-h-11 min-w-0 items-start gap-3 text-left">
         {/* radio / checkbox */}
         <span
           className={cn(
-            'flex h-4 w-4 shrink-0 items-center justify-center border transition-colors',
+            'mt-1 flex h-4 w-4 shrink-0 items-center justify-center border transition-colors',
             multiple ? 'rounded-[4px]' : 'rounded-full',
             selected ? 'border-ember' : 'border-ash/40 group-hover:border-bone/60',
           )}
@@ -314,28 +314,28 @@ function ComponentRow({
           )}
         </span>
         <div className="min-w-0">
-          <div className="flex items-center gap-2">
-            <span className={cn('truncate text-[13px] font-medium sm:text-sm', selected ? 'text-bone' : 'text-ash group-hover:text-bone')}>
+          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+            <span className="text-sm font-medium leading-snug text-bone">
               {comp.name}
             </span>
             {comp.tags?.slice(0, 1).map((tag) => (
               <span
                 key={tag}
-                className="hidden shrink-0 rounded-sm border border-ember/30 bg-ember/10 px-1.5 py-0.5 font-mono text-[8px] font-semibold uppercase tracking-[0.14em] text-flame sm:inline"
+                className="hidden rounded-sm border border-ember/30 bg-ember/10 px-1.5 py-0.5 text-[11px] font-medium text-flame sm:inline"
               >
                 {tag}
               </span>
             ))}
           </div>
-          <span className="mt-0.5 block truncate font-mono text-[10px] text-ash/70 sm:text-[11px]">
+          <span className="mt-1 block text-xs leading-relaxed text-ash">
             {Object.values(comp.specs || {}).slice(0, 3).join(' · ')}
           </span>
         </div>
       </button>
-      <div className="flex shrink-0 items-center gap-2 sm:gap-3">
+      <div className="flex flex-col items-end gap-1">
         <span
           className={cn(
-            'whitespace-nowrap text-right font-mono text-[11px] font-semibold sm:text-xs',
+            'whitespace-nowrap text-right font-mono text-xs font-medium',
             selected
               ? 'text-flame'
               : deltaLabel.startsWith('+')
@@ -523,7 +523,7 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
             key={tab}
             onClick={() => tabs.setMain(tab)}
             className={cn(
-              'shrink-0 rounded-md border px-3 py-1.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] transition-all duration-300',
+              'min-h-11 shrink-0 rounded-md border px-3 py-2 font-mono text-xs font-medium transition-colors duration-300',
               tabs.main === tab
                 ? 'border-ember/60 bg-ember/10 text-flame'
                 : 'border-line bg-white/[0.02] text-ash hover:border-white/20 hover:text-bone',
@@ -540,7 +540,7 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
               key={tab}
               onClick={() => tabs.setSub(tab)}
               className={cn(
-                'shrink-0 rounded-full border px-3 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] transition-all duration-300',
+                'min-h-11 shrink-0 rounded-md border px-3 py-2 font-mono text-xs font-medium transition-colors duration-300',
                 tabs.sub === tab
                   ? 'border-ember/60 bg-ember/10 text-flame'
                   : 'border-line text-ash hover:border-white/20 hover:text-bone',
@@ -584,20 +584,20 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
   const summary = (
     <div className="overflow-hidden rounded-xl border border-ember/35 bg-panel/60">
       <div className="border-b border-line px-5 py-4 sm:px-6">
-        <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.26em] text-ash">
+        <div className="text-sm font-medium text-ash">
           Ваша сборка
         </div>
-        <div className="mt-2 flex items-end justify-between gap-3">
+        <div className="mt-2 flex flex-wrap items-end justify-between gap-x-3 gap-y-1">
           <div className="font-mono text-2xl font-bold text-gradient lg:text-[1.7rem]">
             {isComplete ? (priceReady ? formatPrice(metrics.price) : quote.error ? 'Цена недоступна' : 'Считаем…') : '—'}
           </div>
           {isComplete && priceReady && (
-            <div className="pb-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ash">
+            <div className="pb-0.5 text-xs text-ash">
               После согласования
             </div>
           )}
         </div>
-        <div className="mt-1 font-mono text-[9px] uppercase tracking-[0.16em] text-ash/60">
+        <div className="mt-2 text-xs leading-relaxed text-ash">
           Отсчёт от сборки {pricingBase.title} · {formatPrice(pricingBase.retailPrice)}
         </div>
       </div>
@@ -610,11 +610,11 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
             const value = selection[cat.id]
             const items = cat.id === 'ssd' ? selection.ssd : value && !Array.isArray(value) ? [value] : []
             return (
-              <li key={cat.id} className="flex items-baseline gap-3 text-[12px]">
-                <span className="shrink-0 font-mono text-[9px] uppercase tracking-[0.16em] text-ash">
+              <li key={cat.id} className="flex items-baseline gap-3 text-sm">
+                <span className="w-10 shrink-0 font-mono text-[11px] text-ash">
                   {cat.short}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-right text-ash">
+                <span className="min-w-0 flex-1 text-right leading-snug text-bone">
                   {items.length > 0 ? items.map((c) => c.name).join(' + ') : 'Не выбран'}
                 </span>
               </li>
@@ -741,25 +741,22 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
   return (
     <>
       <div>
-        <section className="relative overflow-hidden pb-20 pt-[120px] lg:pt-[150px]">
+        <section className="relative overflow-hidden pb-20 pt-[104px] lg:pt-[136px]">
           <div className="mx-auto max-w-7xl px-5 lg:px-8">
             <Reveal>
-              <SectionLabel index="Конфигуратор" text="Соберите свою систему" />
-            </Reveal>
-            <Reveal delay={80}>
-              <h1 className="mt-6 max-w-3xl font-display text-[clamp(1.25rem,5.8vw,3.4rem)] font-bold uppercase leading-[1.05] tracking-tight text-bone">
-                Конфигуратор <span className="text-gradient">по комплектующим</span>
+              <h1 className="max-w-3xl font-display text-[clamp(1.25rem,5.8vw,2.75rem)] font-bold uppercase leading-[1.15] tracking-tight text-bone">
+                Конфигуратор ПК
               </h1>
             </Reveal>
             <Reveal delay={140}>
-              <p className="mt-5 max-w-2xl text-[15px] leading-relaxed text-ash">
-                Полный контроль над сборкой: процессор, видеокарта, плата, память, диски, охлаждение,
-                питание и корпус. Конфигуратор проверяет совместимость и сам предлагает замены.
+              <p className="mt-4 max-w-2xl text-[15px] leading-relaxed text-ash">
+                Выберите комплектующие. Совместимость проверим автоматически,
+                состав и стоимость согласуем перед сборкой.
               </p>
             </Reveal>
 
             {/* Навигация по категориям — мобильные чипы */}
-            <div className="no-scrollbar -mx-5 mt-10 flex gap-2 overflow-x-auto px-5 lg:hidden">
+            <div className="no-scrollbar -mx-5 mt-6 flex gap-2 overflow-x-auto px-5 lg:hidden">
               {CATEGORIES.map((cat) => {
                 const value = selection[cat.id]
                 const filled = cat.id === 'ssd' ? selection.ssd.length > 0 : Boolean(value)
@@ -768,14 +765,14 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
                     key={cat.id}
                     onClick={() => setActiveCategory(cat.id)}
                     className={cn(
-                      'flex shrink-0 items-center gap-2 rounded-lg border px-3.5 py-2.5 transition-all duration-300',
+                      'flex min-h-11 shrink-0 items-center gap-2 rounded-lg border px-3.5 py-2.5 transition-colors duration-300',
                       activeCategory === cat.id
                         ? 'border-ember/60 bg-ember/10 text-flame'
                         : 'border-line bg-white/[0.02] text-ash',
                     )}
                   >
                     <Icon name={cat.icon} className="h-4 w-4" />
-                    <span className="font-mono text-[10px] font-semibold uppercase tracking-[0.12em]">
+                    <span className="font-mono text-xs font-semibold uppercase tracking-[0.06em]">
                       {cat.short}
                     </span>
                     {filled && activeCategory !== cat.id && <span className="h-1.5 w-1.5 rounded-full bg-ember" />}
@@ -784,7 +781,7 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
               })}
             </div>
 
-            <div className="mt-8 grid items-start gap-8 lg:mt-12 lg:grid-cols-[220px_minmax(0,1fr)_minmax(0,380px)] lg:gap-10">
+            <div className="mt-6 grid items-start gap-8 lg:mt-8 lg:grid-cols-[200px_minmax(0,1fr)_minmax(0,320px)] lg:gap-6">
               {/* Сайдбар категорий — десктоп */}
               <aside className="sticky top-[100px] hidden lg:block">
                 <div className="space-y-1">
@@ -808,10 +805,10 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
                         </span>
                         <IconTile name={cat.icon} className="h-8 w-8" iconClassName="h-4 w-4" />
                         <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[12px] font-semibold', isActive ? 'text-bone' : 'text-ash')}>
+                          <span className={cn('block text-sm font-semibold', isActive ? 'text-bone' : 'text-ash')}>
                             {cat.label}
                           </span>
-                          <span className="block truncate font-mono text-[9px] text-ash/60">
+                          <span className="mt-1 block text-xs leading-snug text-ash">
                             {items.length > 0 ? items[0].name : 'Не выбран'}
                           </span>
                         </span>
@@ -961,7 +958,7 @@ function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
             <div className="flex items-center justify-between border-b border-line px-6 py-5">
               <div className="flex min-w-0 items-center gap-3">
                 <IconTile name={infoComponent.category} className="h-9 w-9" />
-                <h3 className="truncate font-display text-sm font-bold uppercase tracking-wide text-bone">
+                <h3 className="font-display text-sm font-bold uppercase leading-relaxed tracking-wide text-bone">
                   {infoComponent.name}
                 </h3>
               </div>

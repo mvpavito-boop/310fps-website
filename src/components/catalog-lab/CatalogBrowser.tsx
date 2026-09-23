@@ -65,24 +65,29 @@ function BuildCard({
   onOrder: (b: CatalogBuild) => void
 }) {
   return (
-    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-coal transition-all duration-300 hover:-translate-y-1 hover:border-ember/40 hover:shadow-card">
+    <article className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-line bg-coal transition-colors duration-300 hover:border-ember/40">
+      <div className="px-5 pb-4 pt-5">
+        <h3 className="font-display text-base font-bold uppercase leading-6 tracking-wide text-bone">
+          <Link href={`/catalog/${build.id}`} className="transition-colors hover:text-flame">{build.name}</Link>
+        </h3>
+        <p className="mt-1.5 whitespace-nowrap font-mono text-xl font-semibold text-flame">
+          {formatPrice(build.price)}
+        </p>
+      </div>
       {/* Фото */}
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
           src={build.image}
           alt={build.gallery?.[0]?.alt || `Сборка ${build.name}`}
           fill
+          loading={index < 3 ? 'eager' : 'lazy'}
           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
           className="object-contain transition-transform duration-700 ease-out motion-safe:group-hover:scale-[1.02]"
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-coal via-transparent to-ink/30" aria-hidden />
-        <span className="absolute left-3.5 top-3.5 font-mono text-[9px] uppercase tracking-[0.3em] text-white/50">
-          /{String(index + 1).padStart(2, '0')}
-        </span>
         {build.badge && (
           <span
             className={cn(
-              'absolute right-3.5 top-3.5 rounded px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em]',
+              'absolute right-3.5 top-3.5 rounded px-2.5 py-1 text-xs font-semibold',
               build.hit
                 ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-ink shadow-ember'
                 : 'border border-white/20 bg-ink/70 text-bone/90 backdrop-blur-md',
@@ -94,16 +99,9 @@ function BuildCard({
       </div>
 
       {/* Тело */}
-      <div className="flex flex-1 flex-col p-5">
-        <BuildPhotoNote build={build} compact className="mb-3" />
-        <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.3em] text-ember">
-          {build.series} Series
-        </div>
-        <h3 className="mt-2 font-display text-lg font-bold uppercase tracking-wide text-bone transition-colors duration-300 group-hover:text-gradient-hover">
-          <Link href={`/catalog/${build.id}`}>{build.name}</Link>
-        </h3>
-
-        <ul className="mt-4 space-y-1.5 border-t border-line pt-3.5">
+      <div className="flex flex-1 flex-col px-5 pb-5 pt-2">
+        <BuildPhotoNote build={build} compact className="mb-4" />
+        <ul className="space-y-2.5 border-t border-line py-4">
           {(
             [
               ['cpu', 'CPU', build.cpu, true],
@@ -112,15 +110,15 @@ function BuildCard({
               ['ssd', 'SSD', build.ssd, false],
             ] as const
           ).map(([icon, label, value, primary]) => (
-            <li key={label} className="flex items-center gap-2.5 text-[12px]">
+            <li key={label} className="flex items-start gap-2.5 text-sm leading-snug">
               <Icon
                 name={icon}
-                className={cn('h-3.5 w-3.5 shrink-0', primary ? 'text-ember' : 'text-ash/60')}
+                className={cn('mt-0.5 h-4 w-4 shrink-0', primary ? 'text-ember' : 'text-ash')}
               />
               <span
                 className={cn(
-                  'w-8 shrink-0 font-mono text-[8px] font-semibold uppercase tracking-[0.16em]',
-                  primary ? 'text-ember/80' : 'text-ash/60',
+                  'w-7 shrink-0 pt-0.5 font-mono text-[10px] font-semibold',
+                  primary ? 'text-ember' : 'text-ash',
                 )}
               >
                 {label}
@@ -130,29 +128,19 @@ function BuildCard({
           ))}
         </ul>
 
-        <div className="mb-4 mt-4">
-          {getAvgFps(build) > 0 ? <FpsGauge avg={getAvgFps(build)} /> : <p className="rounded-lg border border-line p-4 text-xs text-ash">Показатели производительности уточняются</p>}
-        </div>
+        {getAvgFps(build) > 0 && <div className="mb-4"><FpsGauge avg={getAvgFps(build)} /></div>}
 
         {/* Цена + действия */}
-        <div className="mt-auto flex flex-wrap items-end justify-between gap-x-3 gap-y-3 border-t border-line pt-4">
-          <div>
-            <div className="font-mono text-[8px] uppercase tracking-[0.2em] text-ash">
-              Полная сборка
-            </div>
-            <div className="mt-1 whitespace-nowrap font-mono text-lg font-bold text-gradient">
-              {formatPrice(build.price)}
-            </div>
-          </div>
-          <div className="flex shrink-0 gap-2">
+        <div className="mt-auto border-t border-line pt-4">
+          <div className="grid grid-cols-2 gap-2.5">
             <Link href={`/catalog/${build.id}`}
-              className="corners inline-flex items-center rounded-md bg-white/[0.03] px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-bone transition-all duration-300 hover:bg-white/[0.07] hover:text-white"
+              className="inline-flex min-h-11 items-center justify-center rounded-md border border-line px-3 text-sm font-semibold text-bone transition-colors hover:border-white/25 hover:bg-white/[0.04]"
             >
               Подробнее
             </Link>
             <button
               onClick={() => onOrder(build)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.97]"
+              className="inline-flex min-h-11 items-center justify-center gap-1.5 rounded-md bg-ember px-3 text-sm font-semibold text-ink transition-colors hover:bg-flame"
             >
               Заказать
               <GlyphArrowUpRight className="h-3.5 w-3.5" />
@@ -178,14 +166,14 @@ function FilterSelect({
 }) {
   return (
     <label className="block min-w-0 flex-1">
-      <span className="mb-2 block font-mono text-[9px] font-semibold uppercase tracking-[0.24em] text-ash">
+      <span className="mb-1.5 block text-xs font-medium text-ash">
         {label}
       </span>
       <span className="relative block">
         <select
           value={value}
           onChange={(e) => onChange(e.target.value)}
-          className="w-full appearance-none rounded-md border border-line bg-ink px-3.5 py-3 pr-9 text-[13px] text-bone transition-colors duration-300 hover:border-white/20 focus:border-ember/60 focus:outline-none"
+          className="min-h-11 w-full appearance-none rounded-md border border-line bg-ink px-3 py-2.5 pr-8 text-sm text-bone transition-colors hover:border-white/20 focus:border-ember/60 focus:outline-none"
         >
           {children}
         </select>
@@ -210,13 +198,14 @@ export function CatalogBrowser({
   const isDefault = JSON.stringify(filters) === JSON.stringify(DEFAULT_FILTERS)
 
   return (
-    <section id="catalog" className="relative py-10 lg:py-14">
+    <section id="catalog" className="relative scroll-mt-24 pb-12 lg:pb-16">
       <div className="mx-auto max-w-7xl px-5 lg:px-8">
+        <h2 className="sr-only">Сборки в каталоге</h2>
         {/* Панель фильтров */}
         <Reveal>
-          <div className="rounded-xl border border-line bg-panel/70 p-5 backdrop-blur-sm lg:p-6">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-end">
-              <div className="grid flex-1 grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="border-y border-line py-4 lg:py-5">
+            <div className="flex items-end gap-3">
+              <div className="grid min-w-0 flex-1 grid-cols-2 gap-x-3 gap-y-3 lg:grid-cols-4">
                 <FilterSelect
                   label="Для чего ПК"
                   value={filters.purpose}
@@ -263,29 +252,30 @@ export function CatalogBrowser({
                   <option value="price_desc">Сначала дороже</option>
                 </FilterSelect>
               </div>
-              <button
+              {!isDefault && <button
                 onClick={() => setFilters(DEFAULT_FILTERS)}
                 disabled={isDefault}
-                className="shrink-0 rounded-md border border-line px-4 py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-ash transition-all duration-300 hover:border-ember/50 hover:text-flame disabled:pointer-events-none disabled:opacity-35"
+                className="hidden min-h-11 shrink-0 rounded-md border border-line px-4 text-sm text-ash transition-colors hover:border-ember/50 hover:text-flame lg:block"
               >
                 Сбросить
-              </button>
+              </button>}
             </div>
           </div>
         </Reveal>
 
         {/* Строка результатов */}
-        <div className="mt-7 flex items-center justify-between font-mono text-[10px] uppercase tracking-[0.26em] text-ash">
+        <div className="mt-4 flex min-h-11 flex-wrap items-center justify-between gap-x-3 text-xs text-ash">
           <span>
             Показано <span className="text-bone">{list.length}</span> из{' '}
             <span className="text-bone">{CATALOG.length}</span> конфигураций
           </span>
-          <span className="hidden sm:block">Цена = чековая стоимость сборки</span>
+          {!isDefault ? <button onClick={() => setFilters(DEFAULT_FILTERS)} className="min-h-11 text-flame underline underline-offset-4 lg:hidden">Сбросить</button> : null}
+          <span className="hidden sm:block">Оплата после согласования</span>
         </div>
 
         {/* Сетка */}
         {list.length > 0 ? (
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          <div className="mt-3 grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
             {list.map((b, i) => (
               <Reveal key={b.id} delay={Math.min(i * 60, 240)} className="h-full">
                 <BuildCard build={b} index={CATALOG.indexOf(b)} onOrder={onOrder} />
