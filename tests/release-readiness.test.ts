@@ -21,6 +21,27 @@ test('consent is explicit and versioned; missing, unchecked and stale consent is
   assert.deepEqual(validateLeadConsent({ accepted: true, version: LEAD_CONSENT_VERSION, acceptedAt: 'forged' }), { accepted: true, version: LEAD_CONSENT_VERSION });
 });
 
+test('production rejects collection before operator details exist, with no outgoing requests', async () => {
+  const { POST } = await import('@/app/api/telegram/lead/route');
+  const environment: Record<string, string | undefined> = process.env;
+  const oldMode = environment.NODE_ENV;
+  const oldName = environment.LEGAL_OPERATOR_NAME;
+  const originalFetch = globalThis.fetch;
+  let requests = 0;
+  try {
+    environment.NODE_ENV = 'production';
+    delete environment.LEGAL_OPERATOR_NAME;
+    globalThis.fetch = async () => { requests++; throw new Error('Network forbidden'); };
+    const response = await POST(new Request('https://preview.test/api/telegram/lead', { method: 'POST', body: JSON.stringify({ name: 'Test', phone: '@test', consent: { accepted: true, version: LEAD_CONSENT_VERSION } }) }));
+    assert.equal(response.status, 503);
+    assert.equal(requests, 0);
+  } finally {
+    if (oldMode === undefined) delete environment.NODE_ENV; else environment.NODE_ENV = oldMode;
+    if (oldName === undefined) delete environment.LEGAL_OPERATOR_NAME; else environment.LEGAL_OPERATOR_NAME = oldName;
+    globalThis.fetch = originalFetch;
+  }
+});
+
 test('first entry survives navigation and only successful API delivery produces a conversion without contact details', async () => {
   const dom = new JSDOM('', { url: 'https://site.test/catalog?utm_source=release-test&yclid=123' });
   const oldWindow = Object.getOwnPropertyDescriptor(globalThis, 'window');

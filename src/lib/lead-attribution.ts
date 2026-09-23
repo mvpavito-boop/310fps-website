@@ -47,7 +47,7 @@ export function captureLeadAttribution(): LeadAttribution {
         if (stored) memory = normalizeAttribution(JSON.parse(stored));
     } catch { /* Storage can be disabled, corrupt, or full. */ }
     if (!memory) {
-        memory = attributionFromUrl(window.location.href, document.referrer);
+        try { memory = attributionFromUrl(window.location.href, document.referrer); } catch { memory = {}; }
         try { window.sessionStorage.setItem(STORAGE_KEY, JSON.stringify(memory)); } catch { /* In-memory fallback. */ }
     }
     return memory;

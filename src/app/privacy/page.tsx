@@ -17,8 +17,8 @@ const SECTIONS: Array<{ title: string; paragraphs?: string[]; bullets?: string[]
     {
         title: "Кто обрабатывает данные",
         paragraphs: [
-            `Оператором персональных данных является ${OPERATOR.name || "оператор, чьи реквизиты уточняются"} (ИНН ${OPERATOR.inn}, ОГРНИП ${OPERATOR.ogrnip}, ${OPERATOR.address}), работающий под коммерческим обозначением «310FPS Custom Lab».`,
-            `Связаться по вопросам обработки данных можно в Telegram ${siteConfig.telegramUrl}, по телефону ${siteConfig.phone} или письмом на ${OPERATOR.email}.`,
+            legalOperatorComplete() ? `Оператором персональных данных является ${OPERATOR.name} (ИНН ${OPERATOR.inn}, ОГРНИП ${OPERATOR.ogrnip}, ${OPERATOR.address}), работающий под коммерческим обозначением «310FPS Custom Lab».` : "Реквизиты оператора будут опубликованы после подтверждения владельцем сайта.",
+            `Связаться по вопросам обработки данных можно в Telegram ${siteConfig.telegramUrl} или по телефону ${siteConfig.phone}${OPERATOR.email ? `, email: ${OPERATOR.email}` : ""}.`,
         ],
     },
     {

@@ -137,7 +137,7 @@ test('lead HTTP response reflects delivery and retains configuration (mock servi
             assert.ok(dbMessage.includes('CPU test'));
             assert.ok(dbMessage.includes('acceptedAt'));
             assert.ok(dbMessage.includes('release-test'));
-            assert.ok(telegramBody.includes('release-test')); 
+            assert.ok(telegramBody.includes('release-test'));
             if (dbOk) assert.ok(telegramBody.includes('/admin/leads'));
             assert.ok(!telegramBody.includes('/admin/leads/test-lead'));
         }
