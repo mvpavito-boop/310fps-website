@@ -90,9 +90,12 @@ export function ReviewsV3() {
     const [mounted, setMounted] = useState(false);
 
     useEffect(() => {
+        const frame = requestAnimationFrame(() => {
         setMounted(true);
         const shuffled = [...ABOUT_REVIEWS].sort(() => Math.random() - 0.5);
         setReviews(shuffled.slice(0, 3));
+        });
+        return () => cancelAnimationFrame(frame);
     }, []);
 
     return (

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { BuildPageContent } from "@/components/catalog-lab/BuildPageContent";
 import { CATALOG, getAvgFps, getBuildById } from "@/lib/data/lab-catalog";
 import { absoluteUrl, createPageMetadata, siteConfig } from "@/lib/site-config";
+import { getPublicCommerce } from "@/lib/commerce/server";
 
 type PageProps = { params: Promise<{ id: string }> };
 
@@ -11,7 +12,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps) {
     const { id } = await params;
-    const build = getBuildById(id);
+    const build = getBuildById(id, (await getPublicCommerce()).catalog);
 
     if (!build) {
         return createPageMetadata({
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function BuildPage({ params }: PageProps) {
     const { id } = await params;
-    const build = getBuildById(id);
+    const build = getBuildById(id, (await getPublicCommerce()).catalog);
 
     if (!build) notFound();
 
@@ -61,7 +62,7 @@ export default async function BuildPage({ params }: PageProps) {
             { "@type": "PropertyValue", name: "Видеокарта", value: build.gpu },
             { "@type": "PropertyValue", name: "Оперативная память", value: build.ram },
             { "@type": "PropertyValue", name: "Накопитель", value: build.ssd },
-            { "@type": "PropertyValue", name: "Средний FPS по замерам", value: `${getAvgFps(build)}` },
+            ...(getAvgFps(build) > 0 ? [{ "@type": "PropertyValue", name: "Средний FPS по замерам", value: `${getAvgFps(build)}` }] : []),
         ],
     };
 
@@ -79,11 +80,11 @@ export default async function BuildPage({ params }: PageProps) {
         <>
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(productJsonLd).replace(/</g, '\\u003c') }}
             />
             <script
                 type="application/ld+json"
-                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd) }}
+                dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbsJsonLd).replace(/</g, '\\u003c') }}
             />
             <BuildPageContent buildId={build.id} />
         </>

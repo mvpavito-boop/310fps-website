@@ -2,6 +2,7 @@ import Link from "next/link";
 import { GlyphArrowUpRight, Icon } from "@/components/ui/lab-icons";
 import { EmberButton, Reveal, SectionLabel } from "@/components/ui/primitives";
 import { formatPrice, getBuildById } from "@/lib/data/lab-catalog";
+import { getPublicCommerce } from "@/lib/commerce/server";
 import { getRelatedGuides, type Guide, type GuideBlock } from "@/lib/data/guides";
 
 function Block({ block }: { block: GuideBlock }) {
@@ -120,10 +121,11 @@ function Block({ block }: { block: GuideBlock }) {
     }
 }
 
-export function ArticleContent({ guide }: { guide: Guide }) {
+export async function ArticleContent({ guide }: { guide: Guide }) {
+    const { catalog } = await getPublicCommerce();
     const related = getRelatedGuides(guide.slug, 3);
     const recommended = (guide.recommendedCatalogIds || [])
-        .map((id) => getBuildById(id))
+        .map((id) => getBuildById(id, catalog))
         .filter((build): build is NonNullable<typeof build> => Boolean(build))
         /* После пересборки каталога рекомендации могли схлопнуться в одну сборку */
         .filter((build, index, all) => all.findIndex((item) => item.id === build.id) === index);

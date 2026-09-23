@@ -5,10 +5,12 @@ import { EmberButton, GhostButton, Reveal, SectionLabel, SectionTitle } from "@/
 import { getGuidesBySlugs } from "@/lib/data/guides";
 import { formatPrice, getAvgFps, getBuildById } from "@/lib/data/lab-catalog";
 import type { GamingPcLanding } from "@/lib/data/gaming-pc-pages";
+import { getPublicCommerce } from "@/lib/commerce/server";
 
-export function GamingPcContent({ page }: { page: GamingPcLanding }) {
+export async function GamingPcContent({ page }: { page: GamingPcLanding }) {
+    const { catalog } = await getPublicCommerce();
     const builds = page.catalogIds
-        .map((id) => getBuildById(id))
+        .map((id) => getBuildById(id, catalog))
         .filter((build): build is NonNullable<typeof build> => Boolean(build))
         .filter((build, index, all) => all.findIndex((item) => item.id === build.id) === index);
 
@@ -52,7 +54,7 @@ export function GamingPcContent({ page }: { page: GamingPcLanding }) {
                         <dl className="mt-10 grid gap-px overflow-hidden rounded-xl border border-line sm:grid-cols-3">
                             {[
                                 ["Монитор", page.monitor],
-                                ["Бюджет", priceFrom ? `от ${formatPrice(priceFrom)}` : page.budget],
+                                ["Бюджет", priceFrom ? `от ${formatPrice(priceFrom)}` : "По запросу"],
                                 ["Сценарий", page.intent],
                             ].map(([key, value]) => (
                                 <div key={key} className="-ml-px -mt-px border border-white/[0.14] bg-ink p-5">
@@ -99,7 +101,7 @@ export function GamingPcContent({ page }: { page: GamingPcLanding }) {
                                                 aria-hidden
                                             />
                                             <span className="absolute right-3.5 top-3.5 rounded-md border border-ember/30 bg-ink/70 px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-flame backdrop-blur-md">
-                                                {getAvgFps(build)} FPS
+                                                {getAvgFps(build) > 0 ? `${getAvgFps(build)} FPS` : 'Под вашу задачу'}
                                             </span>
                                         </div>
                                         <div className="flex flex-1 flex-col p-5">

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { HEADER_NAV } from "@/lib/data/navigation";
 import { GlyphClose, GlyphMenu } from "@/components/ui/lab-icons";
 import { Logo } from "@/components/ui/primitives";
@@ -12,6 +12,7 @@ export function Header() {
     const [scrolled, setScrolled] = useState(false);
     const [open, setOpen] = useState(false);
     const pathname = usePathname();
+    const menuButton = useRef<HTMLButtonElement>(null);
     const isHome = pathname === "/";
 
     useEffect(() => {
@@ -20,6 +21,15 @@ export function Header() {
         window.addEventListener("scroll", onScroll, { passive: true });
         return () => window.removeEventListener("scroll", onScroll);
     }, []);
+
+    useEffect(() => {
+        if (!open) return;
+        const onKey = (event: KeyboardEvent) => {
+            if (event.key === 'Escape') { setOpen(false); menuButton.current?.focus(); }
+        };
+        document.addEventListener('keydown', onKey);
+        return () => document.removeEventListener('keydown', onKey);
+    }, [open]);
 
     /* Меню закрывается при переходе — иначе висит открытым поверх новой страницы.
        Сброс во время рендера, а не в эффекте: так не возникает лишнего кадра
@@ -69,14 +79,16 @@ export function Header() {
                     <Link
                         href="/#cta"
                         data-analytics-goal="header_order_click"
-                        className="inline-flex items-center gap-2 rounded-md border border-ember/40 bg-ember/10 px-5 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-flame transition-all duration-300 hover:bg-ember hover:text-white hover:shadow-ember"
+                        className="inline-flex items-center gap-2 rounded-md border border-ember/40 bg-ember/10 px-5 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-flame transition-all duration-300 hover:bg-ember hover:text-ink hover:shadow-ember"
                     >
                         Заказать ПК
                     </Link>
                 </div>
 
                 <button
-                    className="flex h-10 w-10 items-center justify-center rounded-md border border-line text-bone lg:hidden"
+                    ref={menuButton}
+                    aria-controls="mobile-navigation"
+                    className="flex h-11 w-11 items-center justify-center rounded-md border border-line text-bone lg:hidden"
                     onClick={() => setOpen(!open)}
                     aria-label={open ? "Закрыть меню" : "Открыть меню"}
                     aria-expanded={open}
@@ -87,6 +99,9 @@ export function Header() {
 
             {/* Мобильное меню */}
             <div
+                id="mobile-navigation"
+                inert={!open}
+                aria-hidden={!open}
                 className={cn(
                     "overflow-hidden border-b border-line bg-ink/95 backdrop-blur-xl transition-all duration-500 lg:hidden",
                     open ? "max-h-96" : "max-h-0"
@@ -110,7 +125,7 @@ export function Header() {
                         href="/#cta"
                         onClick={() => setOpen(false)}
                         data-analytics-goal="header_order_click"
-                        className="mt-2 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3 py-3 text-center font-display text-xs font-semibold uppercase tracking-[0.16em] text-white"
+                        className="mt-2 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3 py-3 text-center font-display text-xs font-semibold uppercase tracking-[0.16em] text-ink"
                     >
                         Заказать ПК
                     </Link>

@@ -4,9 +4,10 @@ import { GlyphArrowUpRight, Icon } from "@/components/ui/lab-icons";
 import { Reveal, SectionLabel } from "@/components/ui/primitives";
 import { formatPrice } from "@/lib/data/lab-catalog";
 import { getAllSeriesPages } from "@/lib/data/lab-series";
+import { getPublicCommerce } from "@/lib/commerce/server";
 
-export function SeriesIndexContent() {
-    const series = getAllSeriesPages();
+export async function SeriesIndexContent() {
+    const series = getAllSeriesPages(await getPublicCommerce());
 
     return (
         <section className="relative overflow-hidden pb-20 pt-[120px] lg:pt-[150px]">
@@ -57,7 +58,7 @@ export function SeriesIndexContent() {
                                             {item.lineup.title}
                                         </h2>
                                         {item.hit && (
-                                            <span className="rounded bg-gradient-to-r from-ember to-[#D9A35C] px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white shadow-ember">
+                                            <span className="rounded bg-gradient-to-r from-ember to-[#D9A35C] px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink shadow-ember">
                                                 Хит
                                             </span>
                                         )}

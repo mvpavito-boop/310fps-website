@@ -15,8 +15,8 @@ export function Support() {
                 </Reveal>
                 <Reveal delay={140}>
                     <p className="mx-auto mt-5 max-w-2xl text-center text-[15px] leading-relaxed text-ash">
-                        Гарантия 12 месяцев включена, замена деталей за 1–2 дня (не ремонт)
-                        и ответ в Telegram за 30 минут.
+                        Гарантия 12 месяцев включена. По вопросам обслуживания
+                        можно обратиться напрямую к мастеру.
                     </p>
                 </Reveal>
 

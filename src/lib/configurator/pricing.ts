@@ -45,6 +45,7 @@ export type ConfiguratorPricingBase = {
     retailPrice: number;
     title: string;
     source: 'minimum' | 'catalog' | 'preset';
+    fixedMarkup?: number;
 };
 
 export function buildBaseConfiguration(components: PCComponent[]): SelectedComponents {
@@ -102,6 +103,7 @@ export function calculateRetailPrice(
     if (!isConfigurationComplete(selectedComponents)) return 0;
 
     const selectedCost = getSelectedComponentsCost(selectedComponents);
+    if (pricingBase?.fixedMarkup !== undefined) return Math.max(0, selectedCost + pricingBase.fixedMarkup);
 
     if (pricingBase && isConfigurationComplete(pricingBase.selectedComponents)) {
         const baseCost = getSelectedComponentsCost(pricingBase.selectedComponents);
@@ -208,7 +210,7 @@ function getSelectedSsdCost(ssds: PCComponent[]): number {
     return ssds.reduce((sum, component) => sum + component.price, 0);
 }
 
-function getSelectedComponentsCost(selectedComponents: SelectedComponents): number {
+export function getSelectedComponentsCost(selectedComponents: SelectedComponents): number {
     return Object.entries(selectedComponents).reduce((sum, [category, value]) => {
         if (category === 'ssd' && Array.isArray(value)) {
             return sum + getSelectedSsdCost(value);
@@ -220,4 +222,11 @@ function getSelectedComponentsCost(selectedComponents: SelectedComponents): numb
 
         return sum;
     }, 0);
+}
+
+export function refreshSelectionPrices(selection: SelectedComponents, components: PCComponent[]): SelectedComponents {
+    const current = new Map(components.map((c) => [c.id, c]));
+    return Object.fromEntries(Object.entries(selection).map(([key, value]) => [key,
+        Array.isArray(value) ? (value.every((c) => current.has(c.id)) ? value.map((c) => current.get(c.id)) : []) : value ? current.get(value.id) ?? null : null,
+    ])) as SelectedComponents;
 }

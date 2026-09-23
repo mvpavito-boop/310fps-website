@@ -1,11 +1,10 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { IconTile } from "@/components/ui/lab-icons";
 import { Reveal, SectionLabel, SectionTitle } from "@/components/ui/primitives";
 import { MASTER_INFO } from "@/lib/data/lab-about";
-import { cn } from "@/lib/utils";
 
 export function MasterPortraitV2() {
     const [imageError, setImageError] = useState(false);
@@ -30,7 +29,7 @@ export function MasterPortraitV2() {
                             <div className="absolute inset-0 bg-gradient-to-t from-ink/90 via-ink/20 to-transparent" />
                             <div className="absolute bottom-0 left-0 right-0 p-6 lg:p-8">
                                 <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ember">
-                                    // MASTER_ID: 310-AK-001
+                                    {'// MASTER_ID: 310-AK-001'}
                                 </div>
                                 <div className="mt-2 font-display text-2xl font-bold uppercase text-bone lg:text-3xl">
                                     {MASTER_INFO.name}

@@ -4,7 +4,6 @@ import Image from 'next/image'
 import Link from 'next/link'
 import {
   BUDGETS,
-  CATALOG,
   DEFAULT_FILTERS,
   PURPOSES,
   SERIES_LIST,
@@ -18,6 +17,7 @@ import {
 import { GlyphArrowUpRight, GlyphChevronDown, Icon } from '@/components/ui/lab-icons'
 import { Reveal } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
+import { useCommerce } from './CommerceProvider'
 
 /* ---------- FPS-гейдж: конический циферблат в фирменном янтаре ---------- */
 function FpsGauge({ avg }: { avg: number }) {
@@ -83,7 +83,7 @@ function BuildCard({
             className={cn(
               'absolute right-3.5 top-3.5 rounded px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.18em]',
               build.hit
-                ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-white shadow-ember'
+                ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-ink shadow-ember'
                 : 'border border-white/20 bg-ink/70 text-bone/90 backdrop-blur-md',
             )}
           >
@@ -129,7 +129,7 @@ function BuildCard({
         </ul>
 
         <div className="mb-4 mt-4">
-          <FpsGauge avg={getAvgFps(build)} />
+          {getAvgFps(build) > 0 ? <FpsGauge avg={getAvgFps(build)} /> : <p className="rounded-lg border border-line p-4 text-xs text-ash">Показатели производительности уточняются</p>}
         </div>
 
         {/* Цена + действия */}
@@ -150,7 +150,7 @@ function BuildCard({
             </Link>
             <button
               onClick={() => onOrder(build)}
-              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.97]"
+              className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3.5 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.97]"
             >
               Заказать
               <GlyphArrowUpRight className="h-3.5 w-3.5" />
@@ -203,7 +203,8 @@ export function CatalogBrowser({
   setFilters: (f: CatalogFilters) => void
   onOrder: (b: CatalogBuild) => void
 }) {
-  const list = applyCatalogFilters(filters)
+  const { catalog: CATALOG } = useCommerce()
+  const list = applyCatalogFilters(filters, CATALOG)
   const isDefault = JSON.stringify(filters) === JSON.stringify(DEFAULT_FILTERS)
 
   return (
@@ -258,7 +259,6 @@ export function CatalogBrowser({
                   <option value="default">По умолчанию</option>
                   <option value="price_asc">Сначала дешевле</option>
                   <option value="price_desc">Сначала дороже</option>
-                  <option value="fps_desc">Больше FPS</option>
                 </FilterSelect>
               </div>
               <button
@@ -301,7 +301,7 @@ export function CatalogBrowser({
             </p>
             <button
               onClick={() => setFilters(DEFAULT_FILTERS)}
-              className="mt-6 inline-flex items-center gap-2 rounded-md border border-ember/40 bg-ember/10 px-5 py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-flame transition-all duration-300 hover:bg-ember hover:text-white"
+              className="mt-6 inline-flex items-center gap-2 rounded-md border border-ember/40 bg-ember/10 px-5 py-3 font-mono text-[10px] font-semibold uppercase tracking-[0.18em] text-flame transition-all duration-300 hover:bg-ember hover:text-ink"
             >
               Сбросить фильтры
             </button>

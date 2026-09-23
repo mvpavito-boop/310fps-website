@@ -160,7 +160,7 @@ export function SeriesPageContent({ page }: { page: SeriesPage }) {
                                             <Link href={`/catalog/${build.id}`}>{build.name}</Link>
                                         </h3>
                                         <span className="shrink-0 rounded-md border border-ember/30 bg-ink/70 px-2 py-1 font-mono text-[9px] font-semibold uppercase tracking-[0.14em] text-flame">
-                                            {getAvgFps(build)} FPS
+                                            {getAvgFps(build) > 0 ? `${getAvgFps(build)} FPS` : 'Под вашу задачу'}
                                         </span>
                                     </div>
                                     <p className="mt-3 flex-1 text-[13px] leading-relaxed text-ash">{build.desc}</p>

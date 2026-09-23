@@ -95,8 +95,14 @@ function mapSeriesTier(build: CatalogBuild): CatalogPC["series"] {
     return "2K";
 }
 
-function toCatalogPc(build: CatalogBuild): CatalogPC {
-    const platform = SERIES_PLATFORM[build.series];
+export function toCatalogPc(build: CatalogBuild, commerce?: import('@/lib/commerce/model').PublicCommerce): CatalogPC {
+    const platform = { ...SERIES_PLATFORM[build.series] };
+    const parts = commerce?.parts[build.id];
+    if (commerce?.mode === 'server' && parts) {
+        for (const category of ['motherboard','psu','case','cooling'] as const) {
+            platform[category] = commerce.components.find(c=>c.id===parts[category])!.name;
+        }
+    }
     const line = build.series as CatalogLine;
     const media = CATALOG_LINE_MEDIA[line];
 
@@ -107,7 +113,7 @@ function toCatalogPc(build: CatalogBuild): CatalogPC {
         series: mapSeriesTier(build),
         badge: build.hit ? "ХИТ" : build.badge,
         price: build.price,
-        images: media ? [...media] : [build.image],
+        images: commerce?.mode === 'server' ? [build.image] : media ? [...media] : [build.image],
         description: build.desc,
         specs: {
             cpu: build.cpu,
@@ -120,15 +126,15 @@ function toCatalogPc(build: CatalogBuild): CatalogPC {
             case: platform.case,
         },
         fps: {
-            csgo: `${build.fps.cs2}+ FPS`,
-            cyberpunk: `${build.fps.cyberpunk}+ FPS`,
-            warzone: `${build.fps.fortnite}+ FPS`,
+            csgo: build.fps.cs2 > 0 ? `${build.fps.cs2}+ FPS` : undefined,
+            cyberpunk: build.fps.cyberpunk > 0 ? `${build.fps.cyberpunk}+ FPS` : undefined,
+            warzone: undefined,
         },
         useCases: mapPurposes(build.purposes),
     };
 }
 
-export const catalogData: CatalogPC[] = CATALOG.map(toCatalogPc);
+export const catalogData: CatalogPC[] = CATALOG.map(build => toCatalogPc(build));
 
 export function getCatalogUseCases(pc: CatalogUseCaseSource): CatalogUseCase[] {
     if (pc.useCases?.length) return pc.useCases;

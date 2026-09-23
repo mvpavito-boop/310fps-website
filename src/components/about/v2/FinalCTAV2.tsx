@@ -63,7 +63,7 @@ export function FinalCTAV2() {
                             <div className="absolute inset-0 bg-gradient-to-t from-ink/80 via-transparent to-ink/20" />
                             <div className="absolute bottom-6 left-6 right-6">
                                 <div className="font-mono text-[10px] uppercase tracking-[0.2em] text-ember">
-                                    // AXIOM SERIES
+                                    {'// AXIOM SERIES'}
                                 </div>
                                 <div className="mt-1 font-display text-lg font-bold uppercase text-bone">
                                     От 500 000 ₽

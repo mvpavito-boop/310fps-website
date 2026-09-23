@@ -1,14 +1,30 @@
 "use client";
 
-import { cloneElement, isValidElement, useEffect, useId, useState, type ReactElement, type ReactNode } from "react";
+import { cloneElement, isValidElement, useId, useState, type ReactElement, type ReactNode } from "react";
 import { toast } from "sonner";
-import { Plus, Trash2, Save, Loader2, Eye, EyeOff, Edit2, X, Check } from "lucide-react";
+import { Plus, Trash2, Save, Loader2, Eye, EyeOff, Edit2, X, Check, Database, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-// ── Types ────────────────────────────────────────────────────────────────────
-type FaqItem = { id: string; question: string; answer: string; icon_name: string; sort_order: number; active: boolean };
-type Review = { id: string; name: string; city: string; text: string; pc: string; rating: number; active: boolean; sort_order: number };
-type Settings = Record<string, string>;
+import Link from "next/link";
+import { contentJson, contentRequest, ContentRequestError, parseCreated, parseFaq, parseReviews, parseSaved, parseSettings, type FaqItem, type Review } from "@/lib/admin-content";
+import { useContentMutation, useContentResource } from "@/components/admin/useContentResource";
+
+function ContentUnavailable({ error, onRetry }: { error: ContentRequestError; onRetry: () => void }) {
+    return (
+        <div role="alert" className="max-w-2xl rounded-xl border border-ember/25 bg-panel p-5 sm:p-7">
+            <Database aria-hidden="true" className="mb-5 h-7 w-7 text-ember" />
+            <h2 className="font-display text-base leading-relaxed text-bone">{error.status === 401 ? "Нужно войти снова" : "Контент временно недоступен"}</h2>
+            <p className="mt-3 text-sm leading-relaxed text-ash">{error.message}</p>
+            <p className="mt-3 text-sm leading-relaxed text-ash">Редактирование откроется после успешной загрузки данных.</p>
+            <div className="mt-6 flex flex-wrap gap-3">
+                {error.status === 401 && <Link href="/admin/login?from=/admin/content" className="rounded-lg bg-ember px-4 py-3 text-sm font-semibold text-ink">Войти в админку</Link>}
+                <button onClick={onRetry} className="flex min-h-11 items-center gap-2 rounded-lg border border-ember/40 px-4 py-3 text-sm font-semibold text-flame transition-colors hover:bg-ember/10 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-ember">
+                    <RotateCcw aria-hidden="true" className="h-4 w-4" /> Повторить загрузку
+                </button>
+            </div>
+        </div>
+    );
+}
 
 type FormControlProps = {
     id?: string;
@@ -50,62 +66,53 @@ function ActiveToggle({ active, onToggle }: { active: boolean; onToggle: () => v
 
 // ── FAQ Tab ──────────────────────────────────────────────────────────────────
 function FaqTab() {
-    const [items, setItems] = useState<FaqItem[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: items, setData: setItems, loading, error, reload } = useContentResource("/api/admin/faq", parseFaq, []);
+    const { busy, run } = useContentMutation();
     const [editing, setEditing] = useState<string | null>(null);
     const [editData, setEditData] = useState<Partial<FaqItem>>({});
     const [adding, setAdding] = useState(false);
     const [newItem, setNewItem] = useState({ question: "", answer: "" });
 
-    useEffect(() => {
-        fetch("/api/admin/faq").then(r => r.json()).then(data => { setItems(data); setLoading(false); }).catch(() => setLoading(false));
-    }, []);
-
     const startEdit = (item: FaqItem) => { setEditing(item.id); setEditData({ question: item.question, answer: item.answer }); };
     const cancelEdit = () => { setEditing(null); setEditData({}); };
 
-    const saveEdit = async (id: string) => {
-        try {
-            const res = await fetch(`/api/admin/faq/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editData) });
-            if (!res.ok) throw new Error((await res.json()).error);
-            setItems(prev => prev.map(i => i.id === id ? { ...i, ...editData } : i));
-            cancelEdit();
-            toast.success("Сохранено");
-        } catch (e: unknown) { toast.error("Ошибка", { description: e instanceof Error ? e.message : 'Unknown error' }); }
-    };
+    const saveEdit = (id: string) => run(async () => {
+        if (!editData.question?.trim() || !editData.answer?.trim()) throw new Error("Заполните вопрос и ответ");
+        await contentRequest(`/api/admin/faq/${id}`, parseSaved, contentJson("PUT", editData));
+        setItems(prev => prev.map(i => i.id === id ? { ...i, ...editData } : i));
+        cancelEdit();
+        toast.success("Сохранено");
+    });
 
-    const toggleActive = async (item: FaqItem) => {
-        try {
-            await fetch(`/api/admin/faq/${item.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: !item.active }) });
-            setItems(prev => prev.map(i => i.id === item.id ? { ...i, active: !i.active } : i));
-        } catch { toast.error("Ошибка"); }
-    };
+    const toggleActive = (item: FaqItem) => run(async () => {
+        await contentRequest(`/api/admin/faq/${item.id}`, parseSaved, contentJson("PUT", { active: !item.active }));
+        setItems(prev => prev.map(i => i.id === item.id ? { ...i, active: !i.active } : i));
+    });
 
-    const deleteItem = async (id: string) => {
+    const deleteItem = (id: string) => {
         if (!confirm("Удалить вопрос?")) return;
-        try {
-            await fetch(`/api/admin/faq/${id}`, { method: "DELETE" });
+        return run(async () => {
+            await contentRequest(`/api/admin/faq/${id}`, parseSaved, { method: "DELETE" });
             setItems(prev => prev.filter(i => i.id !== id));
             toast.success("Удалено");
-        } catch { toast.error("Ошибка"); }
+        });
     };
 
-    const addItem = async () => {
-        if (!newItem.question.trim() || !newItem.answer.trim()) { toast.error("Заполните вопрос и ответ"); return; }
-        try {
-            const res = await fetch("/api/admin/faq", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newItem, sort_order: items.length }) });
-            const { id } = await res.json();
-            setItems(prev => [...prev, { id, ...newItem, icon_name: "HelpCircle", sort_order: prev.length, active: true }]);
-            setNewItem({ question: "", answer: "" });
-            setAdding(false);
-            toast.success("Вопрос добавлен");
-        } catch { toast.error("Ошибка"); }
-    };
+    const addItem = () => run(async () => {
+        if (!newItem.question.trim() || !newItem.answer.trim()) throw new Error("Заполните вопрос и ответ");
+        const sortOrder = Math.max(-1, ...items.map(item => item.sort_order)) + 1;
+        const { id } = await contentRequest("/api/admin/faq", parseCreated, contentJson("POST", { ...newItem, sort_order: sortOrder }));
+        setItems(prev => [...prev, { id, ...newItem, icon_name: "HelpCircle", sort_order: sortOrder, active: true }]);
+        setNewItem({ question: "", answer: "" });
+        setAdding(false);
+        toast.success("Вопрос добавлен");
+    });
 
-    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin" /> Загрузка...</div>;
+    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" /> Загрузка...</div>;
+    if (error) return <ContentUnavailable error={error} onRetry={reload} />;
 
     return (
-        <div className="space-y-3">
+        <fieldset disabled={busy} aria-busy={busy} className="min-w-0 space-y-3">
             <div className="flex justify-between items-center">
                 <p className="text-sm text-text-secondary font-sans">{items.length} вопросов</p>
                 <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-3 py-2 bg-accent-orange text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-white hover:text-accent-orange transition-colors">
@@ -140,8 +147,8 @@ function FaqTab() {
                                 <textarea value={editData.answer || ""} onChange={e => setEditData(p => ({ ...p, answer: e.target.value }))} rows={3} className={cn(inputCls, "resize-none")} />
                             </LabeledField>
                             <div className="flex gap-2">
-                                <button onClick={() => saveEdit(item.id)} className="w-8 h-8 rounded-lg bg-green-400/10 text-green-400 flex items-center justify-center hover:bg-green-400/20 transition-colors"><Check className="w-4 h-4" /></button>
-                                <button onClick={cancelEdit} className="w-8 h-8 rounded-lg bg-text-secondary/10 text-text-secondary flex items-center justify-center hover:bg-text-secondary/20 transition-colors"><X className="w-4 h-4" /></button>
+                                <button aria-label="Сохранить изменения" onClick={() => saveEdit(item.id)} className="w-8 h-8 rounded-lg bg-green-400/10 text-green-400 flex items-center justify-center hover:bg-green-400/20 transition-colors"><Check className="w-4 h-4" /></button>
+                                <button aria-label="Отменить изменения" onClick={cancelEdit} className="w-8 h-8 rounded-lg bg-text-secondary/10 text-text-secondary flex items-center justify-center hover:bg-text-secondary/20 transition-colors"><X className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ) : (
@@ -152,72 +159,64 @@ function FaqTab() {
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                                 <ActiveToggle active={item.active} onToggle={() => toggleActive(item)} />
-                                <button onClick={() => startEdit(item)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-orange hover:bg-accent-orange/10 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => deleteItem(item.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-red hover:bg-accent-red/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                <button aria-label="Редактировать" onClick={() => startEdit(item)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-orange hover:bg-accent-orange/10 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                <button aria-label="Удалить вопрос" onClick={() => deleteItem(item.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-red hover:bg-accent-red/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     )}
                 </div>
             ))}
-        </div>
+        </fieldset>
     );
 }
 
 // ── Reviews Tab ──────────────────────────────────────────────────────────────
 function ReviewsTab() {
-    const [reviews, setReviews] = useState<Review[]>([]);
-    const [loading, setLoading] = useState(true);
+    const { data: reviews, setData: setReviews, loading, error, reload } = useContentResource("/api/admin/reviews", parseReviews, []);
+    const { busy, run } = useContentMutation();
     const [adding, setAdding] = useState(false);
     const [newReview, setNewReview] = useState({ name: "", city: "", text: "", pc: "", rating: 5 });
     const [editing, setEditing] = useState<string | null>(null);
     const [editData, setEditData] = useState<Partial<Review>>({});
 
-    useEffect(() => {
-        fetch("/api/admin/reviews").then(r => r.json()).then(data => { setReviews(data); setLoading(false); }).catch(() => setLoading(false));
-    }, []);
+    const toggleActive = (r: Review) => run(async () => {
+        await contentRequest(`/api/admin/reviews/${r.id}`, parseSaved, contentJson("PUT", { active: !r.active }));
+        setReviews(prev => prev.map(i => i.id === r.id ? { ...i, active: !i.active } : i));
+    });
 
-    const toggleActive = async (r: Review) => {
-        try {
-            await fetch(`/api/admin/reviews/${r.id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ active: !r.active }) });
-            setReviews(prev => prev.map(i => i.id === r.id ? { ...i, active: !i.active } : i));
-        } catch { toast.error("Ошибка"); }
-    };
-
-    const deleteReview = async (id: string) => {
+    const deleteReview = (id: string) => {
         if (!confirm("Удалить отзыв?")) return;
-        try {
-            await fetch(`/api/admin/reviews/${id}`, { method: "DELETE" });
+        return run(async () => {
+            await contentRequest(`/api/admin/reviews/${id}`, parseSaved, { method: "DELETE" });
             setReviews(prev => prev.filter(r => r.id !== id));
             toast.success("Удалено");
-        } catch { toast.error("Ошибка"); }
+        });
     };
 
-    const addReview = async () => {
-        if (!newReview.name.trim() || !newReview.text.trim()) { toast.error("Заполните имя и текст"); return; }
-        try {
-            const res = await fetch("/api/admin/reviews", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ ...newReview, sort_order: reviews.length }) });
-            const { id } = await res.json();
-            setReviews(prev => [...prev, { id, ...newReview, active: true, sort_order: prev.length }]);
-            setNewReview({ name: "", city: "", text: "", pc: "", rating: 5 });
-            setAdding(false);
-            toast.success("Отзыв добавлен");
-        } catch { toast.error("Ошибка"); }
-    };
+    const addReview = () => run(async () => {
+        if (!newReview.name.trim() || !newReview.text.trim()) throw new Error("Заполните имя и текст");
+        const sortOrder = Math.max(-1, ...reviews.map(review => review.sort_order)) + 1;
+        const { id } = await contentRequest("/api/admin/reviews", parseCreated, contentJson("POST", { ...newReview, sort_order: sortOrder }));
+        setReviews(prev => [...prev, { id, ...newReview, active: true, sort_order: sortOrder }]);
+        setNewReview({ name: "", city: "", text: "", pc: "", rating: 5 });
+        setAdding(false);
+        toast.success("Отзыв добавлен");
+    });
 
     const startEdit = (r: Review) => { setEditing(r.id); setEditData({ name: r.name, city: r.city, text: r.text, pc: r.pc, rating: r.rating }); };
-    const saveEdit = async (id: string) => {
-        try {
-            await fetch(`/api/admin/reviews/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify(editData) });
-            setReviews(prev => prev.map(r => r.id === id ? { ...r, ...editData } : r));
-            setEditing(null);
-            toast.success("Сохранено");
-        } catch { toast.error("Ошибка"); }
-    };
+    const saveEdit = (id: string) => run(async () => {
+        if (!editData.name?.trim() || !editData.text?.trim()) throw new Error("Заполните имя и текст");
+        await contentRequest(`/api/admin/reviews/${id}`, parseSaved, contentJson("PUT", editData));
+        setReviews(prev => prev.map(r => r.id === id ? { ...r, ...editData } : r));
+        setEditing(null);
+        toast.success("Сохранено");
+    });
 
-    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin" /> Загрузка...</div>;
+    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" /> Загрузка...</div>;
+    if (error) return <ContentUnavailable error={error} onRetry={reload} />;
 
     return (
-        <div className="space-y-3">
+        <fieldset disabled={busy} aria-busy={busy} className="min-w-0 space-y-3">
             <div className="flex justify-between items-center">
                 <p className="text-sm text-text-secondary font-sans">{reviews.filter(r => r.active).length} активных из {reviews.length}</p>
                 <button onClick={() => setAdding(true)} className="flex items-center gap-2 px-3 py-2 bg-accent-orange text-white text-xs font-bold uppercase tracking-wider rounded-lg hover:bg-white hover:text-accent-orange transition-colors">
@@ -228,7 +227,7 @@ function ReviewsTab() {
             {adding && (
                 <div className="bg-card border border-accent-orange/20 rounded-xl p-4 space-y-3">
                     <p className="text-xs font-sans font-bold text-accent-orange uppercase tracking-wider">Новый отзыв</p>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <LabeledField label="Имя автора">
                             <input value={newReview.name} onChange={e => setNewReview(p => ({ ...p, name: e.target.value }))} placeholder="Имя" className={inputCls} />
                         </LabeledField>
@@ -258,7 +257,7 @@ function ReviewsTab() {
                 <div key={r.id} className={cn("bg-card border rounded-xl p-4 transition-all", r.active ? "border-text-secondary/10" : "border-text-secondary/5 opacity-60")}>
                     {editing === r.id ? (
                         <div className="space-y-3">
-                            <div className="grid grid-cols-2 gap-3">
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                 <LabeledField label="Имя автора">
                                     <input value={editData.name || ""} onChange={e => setEditData(p => ({ ...p, name: e.target.value }))} placeholder="Имя" className={inputCls} />
                                 </LabeledField>
@@ -278,8 +277,8 @@ function ReviewsTab() {
                                 <textarea value={editData.text || ""} onChange={e => setEditData(p => ({ ...p, text: e.target.value }))} rows={3} className={cn(inputCls, "resize-none")} />
                             </LabeledField>
                             <div className="flex gap-2">
-                                <button onClick={() => saveEdit(r.id)} className="w-8 h-8 rounded-lg bg-green-400/10 text-green-400 flex items-center justify-center"><Check className="w-4 h-4" /></button>
-                                <button onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-text-secondary/10 text-text-secondary flex items-center justify-center"><X className="w-4 h-4" /></button>
+                                <button aria-label="Сохранить изменения" onClick={() => saveEdit(r.id)} className="w-8 h-8 rounded-lg bg-green-400/10 text-green-400 flex items-center justify-center"><Check className="w-4 h-4" /></button>
+                                <button aria-label="Отменить изменения" onClick={() => setEditing(null)} className="w-8 h-8 rounded-lg bg-text-secondary/10 text-text-secondary flex items-center justify-center"><X className="w-4 h-4" /></button>
                             </div>
                         </div>
                     ) : (
@@ -295,22 +294,21 @@ function ReviewsTab() {
                             </div>
                             <div className="flex items-center gap-1 shrink-0">
                                 <ActiveToggle active={r.active} onToggle={() => toggleActive(r)} />
-                                <button onClick={() => startEdit(r)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-orange hover:bg-accent-orange/10 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                                <button onClick={() => deleteReview(r.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-red hover:bg-accent-red/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                                <button aria-label="Редактировать" onClick={() => startEdit(r)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-orange hover:bg-accent-orange/10 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                                <button aria-label="Удалить отзыв" onClick={() => deleteReview(r.id)} className="w-8 h-8 rounded-lg flex items-center justify-center text-text-secondary hover:text-accent-red hover:bg-accent-red/10 transition-colors"><Trash2 className="w-4 h-4" /></button>
                             </div>
                         </div>
                     )}
                 </div>
             ))}
-        </div>
+        </fieldset>
     );
 }
 
 // ── Settings Tab ─────────────────────────────────────────────────────────────
 function SettingsTab() {
-    const [settings, setSettings] = useState<Settings>({});
-    const [loading, setLoading] = useState(true);
-    const [saving, setSaving] = useState(false);
+    const { data: settings, setData: setSettings, loading, error, reload } = useContentResource("/api/admin/settings", parseSettings, {});
+    const { busy: saving, run } = useContentMutation();
 
     const FIELDS: { key: string; label: string; placeholder: string }[] = [
         { key: "phone", label: "Телефон", placeholder: "+7 (911) 702-70-70" },
@@ -321,31 +319,16 @@ function SettingsTab() {
         { key: "vk_url", label: "VK URL", placeholder: "https://vk.com/pc310fps" },
     ];
 
-    useEffect(() => {
-        fetch("/api/admin/settings").then(r => r.json()).then(data => { setSettings(data); setLoading(false); }).catch(() => setLoading(false));
-    }, []);
+    const handleSave = () => run(async () => {
+        await contentRequest("/api/admin/settings", parseSaved, contentJson("POST", settings));
+        toast.success("Настройки сохранены");
+    });
 
-    const handleSave = async () => {
-        setSaving(true);
-        try {
-            const res = await fetch("/api/admin/settings", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify(settings),
-            });
-            if (!res.ok) throw new Error((await res.json()).error);
-            toast.success("Настройки сохранены!");
-        } catch (e: unknown) {
-            toast.error("Ошибка", { description: e instanceof Error ? e.message : 'Unknown error' });
-        } finally {
-            setSaving(false);
-        }
-    };
-
-    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin" /> Загрузка...</div>;
+    if (loading) return <div className="flex items-center gap-2 text-text-secondary font-sans py-8"><Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" /> Загрузка...</div>;
+    if (error) return <ContentUnavailable error={error} onRetry={reload} />;
 
     return (
-        <div className="space-y-5 max-w-lg">
+        <fieldset disabled={saving} aria-busy={saving} className="min-w-0 space-y-5 max-w-lg">
             {FIELDS.map(({ key, label, placeholder }) => (
                 <div key={key}>
                     <label htmlFor={`admin-setting-${key}`} className="text-xs font-sans text-text-secondary uppercase tracking-wider mb-1.5 block">{label}</label>
@@ -365,10 +348,10 @@ function SettingsTab() {
                 disabled={saving}
                 className="flex items-center gap-2 px-6 py-3 bg-accent-orange text-white font-bold uppercase tracking-wider text-sm rounded-lg hover:bg-white hover:text-accent-orange transition-colors disabled:opacity-50"
             >
-                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
+                {saving ? <Loader2 className="w-4 h-4 animate-spin motion-reduce:animate-none" /> : <Save className="w-4 h-4" />}
                 Сохранить настройки
             </button>
-        </div>
+        </fieldset>
     );
 }
 
@@ -385,20 +368,21 @@ export default function AdminContentPage() {
     const [activeTab, setActiveTab] = useState("reviews");
 
     return (
-        <div className="p-6 lg:p-8 space-y-6">
+        <div className="p-5 sm:p-6 lg:p-8 space-y-6">
             <div>
-                <h1 className="text-2xl font-[family-name:var(--font-russo)] text-foreground uppercase">Контент</h1>
+                <h1 className="text-2xl font-display text-foreground uppercase">Контент</h1>
                 <p className="text-text-secondary font-sans text-sm mt-1">Управление отзывами, FAQ и настройками сайта</p>
             </div>
 
             {/* Табы */}
-            <div className="flex gap-2 border-b border-text-secondary/10 pb-0">
+            <div className="flex flex-wrap gap-1 sm:gap-2 border-b border-text-secondary/10 pb-0">
                 {TABS.map(tab => (
                     <button
                         key={tab.id}
                         onClick={() => setActiveTab(tab.id)}
+                        aria-pressed={activeTab === tab.id}
                         className={cn(
-                            "px-5 py-2.5 text-sm font-sans font-semibold border-b-2 -mb-px transition-colors",
+                            "min-h-11 px-3 sm:px-5 py-2.5 text-sm font-sans font-semibold border-b-2 -mb-px transition-colors",
                             activeTab === tab.id
                                 ? "border-accent-orange text-accent-orange"
                                 : "border-transparent text-text-secondary hover:text-foreground"

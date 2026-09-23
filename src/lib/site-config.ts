@@ -22,6 +22,8 @@ export const siteConfig = {
     telegramReviewsUrl: "https://t.me/lab310fps_reviews",
     vkUrl: "https://vk.com/pc310fps",
     avitoUrl: "https://www.avito.ru/brands/310fps",
+    yandexReviewsUrl: "https://yandex.ru/maps/org/310fps_custom_lab/98102758845/reviews/",
+    twoGisReviewsUrl: "https://2gis.ru/spb/firm/70000001113877971/tab/reviews",
     city: "Санкт-Петербург",
     hours: "10:00 – 21:00",
     keywords: [

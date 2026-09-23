@@ -7,7 +7,7 @@ import { Reveal, SectionLabel, SectionTitle } from "@/components/ui/primitives";
 import { FAQ } from "@/lib/data/lab-home";
 import { cn } from "@/lib/utils";
 
-export function Faq() {
+export function Faq({ asPage = false }: { asPage?: boolean }) {
     const [open, setOpen] = useState<number | null>(0);
 
     return (
@@ -18,7 +18,7 @@ export function Faq() {
                         <SectionLabel index="09" text="FAQ" />
                     </Reveal>
                     <Reveal delay={80}>
-                        <SectionTitle align="left" className="mt-6">
+                        <SectionTitle as={asPage ? "h1" : "h2"} align="left" className="mt-6">
                             Частые <span className="text-gradient">вопросы</span>
                         </SectionTitle>
                     </Reveal>
@@ -40,7 +40,7 @@ export function Faq() {
                             </div>
                             <Link
                                 href="/#cta"
-                                className="shrink-0 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-5 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-white transition-all duration-300 hover:brightness-110 hover:shadow-ember"
+                                className="shrink-0 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-5 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-ink transition-all duration-300 hover:brightness-110 hover:shadow-ember"
                             >
                                 Задать вопрос
                             </Link>
@@ -64,6 +64,7 @@ export function Faq() {
                                     <button
                                         onClick={() => setOpen(isOpen ? null : index)}
                                         aria-expanded={isOpen}
+                                        aria-controls={`faq-answer-${index}`}
                                         className="flex w-full items-center gap-4 px-5 py-5 text-left sm:px-6"
                                     >
                                         <span
@@ -89,6 +90,8 @@ export function Faq() {
                                         </span>
                                     </button>
                                     <div
+                                        id={`faq-answer-${index}`}
+                                        aria-hidden={!isOpen}
                                         className={cn(
                                             "grid transition-all duration-500 ease-[cubic-bezier(0.16,1,0.3,1)]",
                                             isOpen ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"

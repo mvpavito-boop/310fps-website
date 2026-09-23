@@ -13,14 +13,13 @@ import {
 import { EmberButton, Reveal } from '@/components/ui/primitives'
 import {
   BUILD_INCLUDES,
-  CATALOG,
   GAME_SETTINGS,
   SERIES_PLATFORM,
   formatPrice,
-  getBuildById,
   type CatalogBuild,
 } from '@/lib/data/lab-catalog'
 import { cn } from '@/lib/utils'
+import { useCommerce } from './CommerceProvider'
 
 const GAMES: { key: keyof CatalogBuild['fps']; label: string }[] = [
   { key: 'cs2', label: 'CS2' },
@@ -104,6 +103,7 @@ function StickyBar({ build, onOrder }: { build: CatalogBuild; onOrder: () => voi
         show ? 'translate-y-0' : '-translate-y-full',
       )}
       aria-hidden={!show}
+      inert={!show}
     >
       <div className="mx-auto flex max-w-7xl items-center justify-between gap-6 px-8 py-3">
         <div className="flex min-w-0 items-center gap-3.5">
@@ -118,7 +118,7 @@ function StickyBar({ build, onOrder }: { build: CatalogBuild; onOrder: () => voi
           <span className="font-mono text-base font-bold text-gradient">{formatPrice(build.price)}</span>
           <button
             onClick={onOrder}
-            className="rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-5 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+            className="rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-5 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
           >
             Заказать
           </button>
@@ -182,7 +182,9 @@ function SpecGroup({
 }
 
 export function BuildPageContent({ buildId }: { buildId: string }) {
-  const build = getBuildById(buildId)
+  const commerce = useCommerce()
+  const CATALOG = commerce.catalog
+  const build = CATALOG.find((b) => b.id === buildId)
   const [orderOpen, setOrderOpen] = useState(false)
   const [shot, setShot] = useState(0)
   const [openGroup, setOpenGroup] = useState(0)
@@ -199,17 +201,20 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
   /* Несуществующий id отсекается на уровне маршрута через notFound() */
   if (!build) return null
 
-  const platform = SERIES_PLATFORM[build.series]
+  const platform = { ...SERIES_PLATFORM[build.series] }
+  const parts = commerce.parts[buildId]
+  if (commerce.mode === 'server' && parts) {
+    for (const category of ['motherboard', 'psu', 'case', 'cooling'] as const) {
+      const name = commerce.components.find((c) => c.id === parts[category])?.name
+      if (name) platform[category] = name
+    }
+  }
   const index = CATALOG.indexOf(build)
-  const maxFps = Math.max(...GAMES.map((g) => build.fps[g.key]), 1)
-  const monthly = formatPrice(Math.round(build.price / 12 / 100) * 100)
+  const maxFps = build.fpsEvidence ? Math.max(...GAMES.map((g) => build.fps[g.key]), 1) : 1
 
-  const gallery = [
-    { src: build.image, alt: `Сборка ${build.name}` },
-    { src: '/images/feature-cables.png', alt: 'Кастомный кабель-менеджмент' },
-    { src: '/images/feature-stress.png', alt: 'Стресс-тест 24 часа' },
-    { src: '/images/feature-budget.png', alt: 'Коробки и чеки от каждой детали' },
-  ]
+  const gallery = build.gallery?.length ? build.gallery : [{ src: build.image, alt: `Сборка ${build.name}` }]
+
+  const activePhoto = gallery[Math.min(shot, gallery.length - 1)]
 
   /* Варианты той же линейки (паттерн HYPERPC — выбор конфигурации чипами) */
   const siblings = CATALOG.filter((b) => b.series === build.series)
@@ -270,21 +275,15 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
               <Reveal delay={80}>
                 <div>
                   <div className="relative overflow-hidden rounded-xl border border-line">
-                    {gallery.map((g, i) => (
-                      <Image
-                        key={g.src}
-                        src={g.src}
-                        alt={g.alt}
-                        width={1200}
-                        height={900}
-                        priority={i === 0}
-                        sizes="(max-width: 1024px) 100vw, 55vw"
-                        className={cn(
-                          'aspect-[4/3] w-full object-cover transition-opacity duration-500',
-                          i === shot ? 'opacity-100' : 'absolute inset-0 opacity-0',
-                        )}
-                      />
-                    ))}
+                    <Image
+                      src={activePhoto.src}
+                      alt={activePhoto.alt}
+                      width={1200}
+                      height={900}
+                      priority={shot === 0}
+                      sizes="(max-width: 1024px) 100vw, 55vw"
+                      className="aspect-[4/3] w-full object-contain"
+                    />
                     <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-ink/10" aria-hidden />
                     <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.3em] text-white/50">
                       /{String(index + 1).padStart(2, '0')}
@@ -294,7 +293,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                         className={cn(
                           'absolute right-4 top-4 rounded px-2.5 py-1.5 font-mono text-[9px] font-bold uppercase tracking-[0.18em]',
                           build.hit
-                            ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-white shadow-ember'
+                            ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-ink shadow-ember'
                             : 'border border-white/20 bg-ink/70 text-bone/90 backdrop-blur-md',
                         )}
                       >
@@ -330,7 +329,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
               </Reveal>
 
               {/* ---------- Покупка ---------- */}
-              <div className="flex flex-col">
+              <div className="flex min-w-0 flex-col">
                 <Reveal delay={120}>
                   <div className="font-mono text-[11px] font-semibold uppercase tracking-[0.3em] text-ember">
                     {build.series} Series
@@ -356,13 +355,13 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                             key={s.id}
                             href={`/catalog/${s.id}`}
                             className={cn(
-                              'rounded-lg border px-3 py-2.5 text-left transition-all duration-300',
+                              'min-w-0 rounded-lg border px-2 py-2.5 text-left transition-all duration-300 sm:px-3',
                               s.id === build.id
                                 ? 'border-ember/60 bg-ember/10'
                                 : 'border-line bg-ink/40 hover:border-white/25',
                             )}
                           >
-                            <span className="block font-display text-[11px] font-bold uppercase leading-snug tracking-[0.06em] text-bone">
+                            <span className="block font-display text-[10px] font-bold uppercase leading-snug tracking-[0.04em] text-bone sm:text-[11px] sm:tracking-[0.06em]">
                               {s.name}
                             </span>
                             <span className="mt-0.5 block font-mono text-[10px] font-semibold text-gradient">
@@ -377,23 +376,23 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
 
                 {/* Цена */}
                 <Reveal delay={200}>
-                  <div className="mt-7 rounded-xl border border-ember/35 bg-panel/60 p-6">
+                  <div className="mt-7 rounded-xl border border-ember/35 bg-panel/60 p-5 sm:p-6">
                     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2">
                       <div>
                         <div className="font-mono text-[9px] uppercase tracking-[0.24em] text-ash">
                           Полная сборка
                         </div>
-                        <div className="mt-2 whitespace-nowrap font-mono text-4xl font-bold text-gradient lg:text-[2.75rem] lg:leading-none">
+                        <div className="mt-2 whitespace-nowrap font-mono text-3xl font-bold text-gradient sm:text-4xl lg:text-[2.75rem] lg:leading-none">
                           {formatPrice(build.price)}
                         </div>
                       </div>
                       <div className="pb-1 font-mono text-[11px] uppercase tracking-[0.1em] text-ash">
-                        или от <span className="font-bold text-bone">{monthly}</span>/мес × 12
+                        Оплата после согласования
                       </div>
                     </div>
                     <div className="mt-3 flex items-center gap-2 font-mono text-[9px] uppercase tracking-[0.16em] text-ash">
                       <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                      Сборка под заказ · 3–5 дней
+                      Срок сборки согласуем с вами
                     </div>
                     {/* При наведении на «Изменить в конфигураторе» заказ из солидной
                         кнопки превращается в контурную — акцент переходит, а не гаснет */}
@@ -403,7 +402,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                         <GlyphArrowUpRight className="h-4 w-4" />
                       </EmberButton>
                       <Link href={`/configurator?build=${build.id}`}
-                        className="btn-conf inline-flex items-center justify-center gap-2.5 rounded-md border border-ember/40 bg-ember/10 px-7 py-3 font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-flame transition-all duration-300 hover:bg-ember hover:text-white hover:shadow-ember active:scale-[0.98]"
+                        className="btn-conf inline-flex items-center justify-center gap-2.5 rounded-md border border-ember/40 bg-ember/10 px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-flame transition-all duration-300 hover:bg-ember hover:text-ink hover:shadow-ember active:scale-[0.98] sm:px-7 sm:text-[13px] sm:tracking-[0.14em]"
                       >
                         <Icon name="wrench" className="h-4 w-4" />
                         Изменить в конфигураторе
@@ -417,7 +416,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
         </section>
 
         {/* ================= FPS: анимированные полосы ================= */}
-        <section className="section-fade relative py-14 lg:py-20">
+        {maxFps > 1 && <section className="section-fade relative py-14 lg:py-20">
           <div className="mx-auto max-w-7xl px-5 lg:px-8">
             <Reveal>
               <div className="flex flex-wrap items-end justify-between gap-3">
@@ -431,7 +430,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
             </Reveal>
             <Reveal delay={100}>
               <div className="mt-8 grid gap-x-12 gap-y-6 sm:grid-cols-2">
-                {GAMES.map((g, i) => (
+                {GAMES.filter(g => build.fps[g.key] > 0).map((g, i) => (
                   <FpsBar
                     key={g.key}
                     label={g.label}
@@ -444,7 +443,7 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
               </div>
             </Reveal>
           </div>
-        </section>
+        </section>}
 
         {/* ================= Спецификация аккордеоном ================= */}
         <section className="relative py-14 lg:py-20">

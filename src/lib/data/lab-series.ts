@@ -10,6 +10,7 @@
 
 import { CATALOG, SERIES_PLATFORM, type CatalogBuild } from "@/lib/data/lab-catalog";
 import { LINEUP, type LineupModel } from "@/lib/data/lineup";
+import type { PublicCommerce } from '@/lib/commerce/model';
 
 export type SeriesSlug = "signal" | "vector" | "canvas" | "spectre" | "axiom";
 
@@ -77,30 +78,42 @@ export type SeriesPage = SeriesMeta & {
     priceFrom: number;
 };
 
-function buildSeriesPage(slug: SeriesSlug): SeriesPage | undefined {
+function buildSeriesPage(slug: SeriesSlug, commerce?: PublicCommerce): SeriesPage | undefined {
     const lineup = LINEUP.find((model) => model.id === slug);
     if (!lineup) return undefined;
 
     const seriesKey = slug.toUpperCase() as CatalogBuild["series"];
-    const builds = CATALOG.filter((build) => build.series === seriesKey);
+    const builds = (commerce?.catalog ?? CATALOG).filter((build) => build.series === seriesKey);
     if (builds.length === 0) return undefined;
 
+    const priceFrom = Math.min(...builds.map((build) => build.price));
+    const platform = { ...SERIES_PLATFORM[seriesKey] };
+    const first = [...builds].sort((a,b) => a.price-b.price)[0];
+    const parts = commerce?.parts[first.id];
+    if (commerce?.mode === 'server' && parts) {
+        for (const category of ['motherboard','psu','case','cooling'] as const) {
+            const name = commerce.components.find((c) => c.id === parts[category])?.name;
+            if (name) platform[category] = name;
+        }
+    }
     return {
         ...SERIES_META[slug],
-        lineup,
+        metaTitle: SERIES_META[slug].metaTitle.replace(/от [\d ]+ ₽/i, `от ${priceFrom.toLocaleString('ru-RU')} ₽`),
+        metaDescription: SERIES_META[slug].metaDescription.replace(/От [\d ]+ ₽/i, `От ${priceFrom.toLocaleString('ru-RU')} ₽`),
+        lineup: commerce?.mode === 'server' ? { ...lineup, description: first.desc } : lineup,
         builds,
-        platform: SERIES_PLATFORM[seriesKey],
-        priceFrom: Math.min(...builds.map((build) => build.price)),
+        platform,
+        priceFrom,
     };
 }
 
-export function getAllSeriesPages(): SeriesPage[] {
-    return SERIES_ORDER.map(buildSeriesPage).filter((page): page is SeriesPage => Boolean(page));
+export function getAllSeriesPages(commerce?: PublicCommerce): SeriesPage[] {
+    return SERIES_ORDER.map((slug) => buildSeriesPage(slug, commerce)).filter((page): page is SeriesPage => Boolean(page));
 }
 
-export function getSeriesPageBySlug(slug: string): SeriesPage | undefined {
+export function getSeriesPageBySlug(slug: string, commerce?: PublicCommerce): SeriesPage | undefined {
     if (!SERIES_ORDER.includes(slug as SeriesSlug)) return undefined;
-    return buildSeriesPage(slug as SeriesSlug);
+    return buildSeriesPage(slug as SeriesSlug, commerce);
 }
 
 export function getAllSeriesSlugs(): SeriesSlug[] {

@@ -15,7 +15,7 @@ const CHANNELS = [
         icon: "send",
         title: "Telegram",
         value: "@lab310fps",
-        href: siteConfig.telegramUrl,
+        href: siteConfig.telegramDirectUrl,
         note: "Основной канал. Ответ за 30 минут в рабочее время.",
         goal: "contacts_telegram_click",
     },

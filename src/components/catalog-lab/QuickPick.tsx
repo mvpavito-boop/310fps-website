@@ -1,6 +1,7 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Modal } from '@/components/ui/Modal'
+import { useState } from 'react'
 import { GlyphClose, Icon } from '@/components/ui/lab-icons'
 import { BUDGETS, PURPOSES, type Purpose } from '@/lib/data/lab-catalog'
 import { cn } from '@/lib/utils'
@@ -12,7 +13,7 @@ function Tag({ text, hot, active }: { text: string; hot?: boolean; active: boole
       className={cn(
         'inline-block rounded px-1.5 py-0.5 font-mono text-[8px] font-bold uppercase tracking-[0.14em]',
         hot
-          ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-white shadow-ember'
+          ? 'bg-gradient-to-r from-ember to-[#D9A35C] text-ink shadow-ember'
           : active
             ? 'bg-ember/25 text-flame'
             : 'bg-white/[0.07] text-ash',
@@ -45,37 +46,20 @@ export function QuickPick({
     if (open) setStep(1)
   }
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [open, onClose])
-
   if (!open) return null
 
   const finish = () => {
     onApply(purpose, budget)
     onClose()
-    document.getElementById('catalog')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    document.getElementById('catalog')?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth', block: 'start' })
   }
 
   const selectedPurpose = PURPOSES.find((p) => p.value === purpose)
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/80 p-4 backdrop-blur-md"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label="Быстрый подбор ПК"
-    >
+    <Modal label="Быстрый подбор ПК" onClose={onClose} wide>
       <div
-        className="flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-line bg-coal shadow-card"
+        className="flex max-h-[calc(100dvh-2rem)] w-full max-w-3xl flex-col overflow-hidden rounded-xl border border-line bg-coal shadow-card"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Шапка */}
@@ -92,7 +76,7 @@ export function QuickPick({
           <button
             onClick={onClose}
             aria-label="Закрыть"
-            className="absolute right-4 top-4 flex h-9 w-9 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
+            className="absolute right-4 top-4 flex h-11 w-11 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
           >
             <GlyphClose className="h-4 w-4" />
           </button>
@@ -207,12 +191,12 @@ export function QuickPick({
           </button>
           <button
             onClick={() => (step === 1 ? setStep(2) : finish())}
-            className="rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+            className="rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
           >
             {step === 1 ? 'Далее →' : 'Показать сборки →'}
           </button>
         </div>
       </div>
-    </div>
+    </Modal>
   )
 }

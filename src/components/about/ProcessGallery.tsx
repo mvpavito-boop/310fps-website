@@ -40,7 +40,7 @@ export function ProcessGallery() {
                                 </div>
                                 <figcaption className="absolute bottom-0 left-0 right-0 p-4 lg:p-5">
                                     <span className="font-mono text-[10px] uppercase tracking-[0.18em] text-ember">
-                                        // 0{i + 1}
+                                        {"// "}0{i + 1}
                                     </span>
                                     <h3 className="mt-1 font-display text-[14px] font-bold uppercase tracking-wide text-bone">
                                         {item.label}

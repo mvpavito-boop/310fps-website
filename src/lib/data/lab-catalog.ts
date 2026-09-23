@@ -25,6 +25,9 @@ export interface CatalogBuild {
   ram: string
   ssd: string
   image: string
+  gallery?: { src: string; alt: string }[]
+  photosVerified?: boolean
+  fpsEvidence?: { testedAt: string; reportUrl: string }
 }
 
 export const CATALOG: CatalogBuild[] = [
@@ -240,13 +243,15 @@ export const DEFAULT_FILTERS: CatalogFilters = {
   sort: 'default',
 }
 
+// Historical estimates remain in source data; only documented measurements are shown.
 export function getAvgFps(b: CatalogBuild): number {
-  const vals = Object.values(b.fps)
-  return Math.round(vals.reduce((a, v) => a + v, 0) / vals.length / 5) * 5
+  if (!b.fpsEvidence) return 0
+  const vals = Object.values(b.fps).filter(v => v > 0)
+  return vals.length ? Math.round(vals.reduce((a, v) => a + v, 0) / vals.length / 5) * 5 : 0
 }
 
-export function applyCatalogFilters(f: CatalogFilters): CatalogBuild[] {
-  let list = CATALOG.filter((b) => {
+export function applyCatalogFilters(f: CatalogFilters, catalog: CatalogBuild[] = CATALOG): CatalogBuild[] {
+  let list = catalog.filter((b) => {
     if (f.purpose !== 'all' && !b.purposes.includes(f.purpose)) return false
     if (f.series !== 'all' && b.series !== f.series) return false
     if (f.budget !== 'all') {
@@ -265,8 +270,8 @@ export function formatPrice(n: number): string {
   return n.toLocaleString('ru-RU') + ' ₽'
 }
 
-export function getBuildById(id: string): CatalogBuild | undefined {
-  return CATALOG.find((b) => b.id === id)
+export function getBuildById(id: string, catalog: CatalogBuild[] = CATALOG): CatalogBuild | undefined {
+  return catalog.find((b) => b.id === id)
 }
 
 /* Платформа линейки: корпус, охлаждение, плата, БП — общие для конфигураций серии */
@@ -312,8 +317,8 @@ export const BUILD_INCLUDES: { icon: string; title: string; text: string }[] = [
   { icon: 'flame', title: 'Стресс-тест 24 часа', text: 'AIDA64 + FurMark + memtest, результаты — в паспорте' },
   { icon: 'video', title: 'Видео сборки', text: 'Таймлапс всего процесса отправляем в Telegram' },
   { icon: 'receipt', title: 'Коробки и чеки', text: 'Упаковка и гарантийные талоны на каждую комплектующую' },
-  { icon: 'shield', title: 'Гарантия 12 месяцев', text: 'Замена детали за 1–2 дня, а не 45 дней в сервисном центре' },
-  { icon: 'box', title: 'Доставка в обрешётке', text: 'Демпфер внутри корпуса, 0% повреждений за всё время' },
+  { icon: 'shield', title: 'Гарантия 12 месяцев', text: 'Условия и сроки обслуживания фиксируем в документах заказа' },
+  { icon: 'box', title: 'Доставка в обрешётке', text: 'Защитная упаковка и демпфер внутри корпуса' },
 ]
 
 /* Настройки замеров FPS по играм (единые для всех сборок) */

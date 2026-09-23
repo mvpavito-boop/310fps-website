@@ -1,3 +1,4 @@
+import { SAVED_BUILD_ID } from '@/lib/configurator/saved-build';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 
@@ -6,21 +7,23 @@ export async function GET(
     { params }: { params: Promise<{ id: string }> }
 ) {
     const { id } = await params;
+    if (!SAVED_BUILD_ID.test(id)) return NextResponse.json({ error: 'Сборка не найдена.' }, { status: 404 });
     try {
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) } }
         );
 
         const { data, error } = await supabase
             .from('saved_builds')
-            .select('*')
+            .select('id, total_price, components, created_at')
             .eq('id', id)
             .single();
 
         if (error) {
             if (error.code === 'PGRST116') {
-                return NextResponse.json({ error: 'Build not found' }, { status: 404 });
+                return NextResponse.json({ error: 'Сборка не найдена.' }, { status: 404 });
             }
             throw error;
         }
@@ -31,8 +34,8 @@ export async function GET(
             components: data.components,
             createdAt: data.created_at
         });
-    } catch (error: unknown) {
-        console.error(`[API /api/builds] GET Error:`, error);
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    } catch {
+        console.error('[API /api/builds] Read failed');
+        return NextResponse.json({ error: 'Не удалось загрузить сборку. Попробуйте позже.' }, { status: 500 });
     }
 }

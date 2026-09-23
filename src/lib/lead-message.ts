@@ -1,3 +1,6 @@
+import { ValidationError } from './admin-validation';
+import { ATTRIBUTION_KEYS, type LeadAttribution } from './lead-attribution';
+
 export type LeadConfig = Record<string, string>;
 
 export type LeadMessageInput = {
@@ -9,6 +12,7 @@ export type LeadMessageInput = {
     modelTitle?: string;
     priceFrom?: number | null;
     config?: LeadConfig;
+    attribution?: LeadAttribution;
 };
 
 const CONFIG_LABELS: Record<string, string> = {
@@ -25,7 +29,7 @@ const CONFIG_LABELS: Record<string, string> = {
 };
 
 export function sanitizeTelegramText(value: string | number | undefined | null): string {
-    return (value || '').toString().replace(/[<>&"']/g, (char) => ({
+    return (value ?? '').toString().replace(/[<>&"']/g, (char) => ({
         '<': '&lt;',
         '>': '&gt;',
         '&': '&amp;',
@@ -35,6 +39,14 @@ export function sanitizeTelegramText(value: string | number | undefined | null):
 }
 
 export function normalizeLeadConfig(rawConfig: Record<string, unknown>): LeadConfig {
+    if (Object.keys(rawConfig).length > 16 || JSON.stringify(rawConfig).length > 4000) {
+        throw new ValidationError('Слишком большой состав сборки. Сократите описание комплектующих.');
+    }
+    for (const [key, value] of Object.entries(rawConfig)) {
+        if (key.length > 60 || (typeof value === 'string' && value.length > 300)) {
+            throw new ValidationError('Слишком длинное название комплектующего.');
+        }
+    }
     return Object.fromEntries(
         Object.entries(rawConfig)
             .filter(([key, value]) => {
@@ -45,14 +57,16 @@ export function normalizeLeadConfig(rawConfig: Record<string, unknown>): LeadCon
     );
 }
 
-export function buildLeadDbMessage(input: Pick<LeadMessageInput, 'message' | 'modelId' | 'source' | 'priceFrom'>): string {
+export function buildLeadDbMessage(input: Pick<LeadMessageInput, 'message' | 'modelId' | 'modelTitle' | 'source' | 'priceFrom' | 'config' | 'attribution'>): string {
     const contextBlock = input.modelId
         ? `\n[order:${input.modelId}|source:${input.source || 'unknown'}|price:${input.priceFrom || 'n/a'}]`
         : input.source
             ? `\n[source:${input.source}]`
             : '';
 
-    return `${input.message || ''}${contextBlock}`.trim();
+    const details = Object.entries(input.config || {}).map(([key, value]) => `${CONFIG_LABELS[key] || key}: ${value}`);
+    const attribution = ATTRIBUTION_KEYS.filter(key => input.attribution?.[key]).map(key => `${key}: ${input.attribution![key]}`);
+    return [input.message || '', input.modelTitle || '', ...details, contextBlock, ...attribution].filter(Boolean).join('\n').trim();
 }
 
 function getSourceLabel(source: string, modelTitle: string) {
@@ -77,6 +91,7 @@ function getOrderTitle(source: string, modelTitle: string) {
 }
 
 export function buildLeadTelegramMessage(input: LeadMessageInput): string {
+    const campaign = ATTRIBUTION_KEYS.filter(key => input.attribution?.[key]).map(key => `${key}: ${sanitizeTelegramText(input.attribution![key])}`).join('\n');
     const safeName = sanitizeTelegramText(input.name);
     const safePhone = sanitizeTelegramText(input.phone);
     const safeMessage = sanitizeTelegramText(input.message || '');
@@ -89,7 +104,7 @@ export function buildLeadTelegramMessage(input: LeadMessageInput): string {
         const configLines = Object.entries(config)
             .filter(([, value]) => value)
             .map(([key, value]) => {
-                const label = CONFIG_LABELS[key] || key;
+                const label = sanitizeTelegramText(CONFIG_LABELS[key] || key);
                 return `  • <b>${label}:</b> ${sanitizeTelegramText(value)}`;
             })
             .join('\n');
@@ -109,6 +124,7 @@ export function buildLeadTelegramMessage(input: LeadMessageInput): string {
             '',
             `🖥 <b>Конфигурация:</b>\n${configLines}`,
             safeMessage ? `\n💬 <b>Комментарий:</b> ${safeMessage}` : '',
+            campaign ? `\n📊 <b>Источник перехода:</b>\n${campaign}` : '',
         ].filter(Boolean).join('\n');
     }
 
@@ -121,5 +137,6 @@ export function buildLeadTelegramMessage(input: LeadMessageInput): string {
         safeSource ? `📍 <b>Source:</b> <code>${safeSource}</code>` : '',
         safeModelTitle ? `🧩 <b>Контекст:</b> ${safeModelTitle}` : '',
         safeMessage ? `💬 <b>Сообщение:</b> ${safeMessage}` : '',
+        campaign ? `\n📊 <b>Источник перехода:</b>\n${campaign}` : '',
     ].filter(Boolean).join('\n');
 }

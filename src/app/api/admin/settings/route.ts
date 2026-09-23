@@ -1,13 +1,7 @@
-import { NextResponse } from 'next/server';
-import { createClient } from '@supabase/supabase-js';
-import { assertRecord, unknownErrorMessage, ValidationError, validationErrorMessage } from '@/lib/admin-validation';
+import { contentDatabase as supabase, contentResponse, contentFailure } from '@/lib/admin-content-server';
+import { assertRecord, ValidationError } from '@/lib/admin-validation';
 
-function supabase() {
-    return createClient(
-        process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
-    );
-}
+export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
@@ -22,9 +16,9 @@ export async function GET() {
             settings[row.key] = row.value;
         }
 
-        return NextResponse.json(settings);
+        return contentResponse(settings);
     } catch (error: unknown) {
-        return NextResponse.json({ error: unknownErrorMessage(error) }, { status: 500 });
+        return contentFailure(error);
     }
 }
 
@@ -36,26 +30,21 @@ export async function POST(request: Request) {
         // body = { key: value, ... }
         const entries = Object.entries(body);
         if (entries.length === 0) {
-            return NextResponse.json({ error: 'No settings to update' }, { status: 400 });
+            return contentResponse({ error: 'Нет настроек для сохранения. Заполните нужные поля.' }, 400);
         }
 
-        for (const [key, value] of entries) {
-            if (!/^[a-zA-Z0-9_.-]{1,80}$/.test(key)) {
-                return NextResponse.json({ error: `Invalid setting key: ${key}` }, { status: 400 });
+        const rows = entries.map(([key, value]) => {
+            if (!/^[a-zA-Z0-9_.-]{1,80}$/.test(key) || typeof value !== 'string') {
+                throw new ValidationError('Настройки должны содержать текстовые значения и корректные названия полей.');
             }
+            return { key, value };
+        });
+        // Validate the entire payload first; one statement avoids partially saved settings.
+        const { error } = await supabase().from('site_settings').upsert(rows, { onConflict: 'key' });
+        if (error) throw error;
 
-            const { error } = await supabase()
-                .from('site_settings')
-                .upsert({ key, value }, { onConflict: 'key' });
-
-            if (error) throw error;
-        }
-
-        return NextResponse.json({ ok: true });
+        return contentResponse({ ok: true });
     } catch (error: unknown) {
-        if (error instanceof ValidationError) {
-            return NextResponse.json({ error: validationErrorMessage(error) }, { status: 400 });
-        }
-        return NextResponse.json({ error: unknownErrorMessage(error) }, { status: 500 });
+        return contentFailure(error);
     }
 }

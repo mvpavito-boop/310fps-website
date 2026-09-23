@@ -7,8 +7,16 @@ import { GlyphArrowUpRight, GlyphPlus, Icon } from "@/components/ui/lab-icons";
 import { Reveal, SectionLabel, SectionTitle } from "@/components/ui/primitives";
 import { LINEUP } from "@/lib/data/lab-home";
 import { cn } from "@/lib/utils";
+import { useCommerce } from "@/components/catalog-lab/CommerceProvider";
+import { formatPrice } from "@/lib/data/lab-catalog";
 
 export function LabSeries() {
+    const { catalog, mode } = useCommerce();
+    const lineup = LINEUP.map((line) => {
+        const builds = catalog.filter((b) => b.series === line.name);
+        const first = [...builds].sort((a,b)=>a.price-b.price)[0];
+        return { ...line, fps: 'Под вашу задачу', ...(mode === 'server' && first ? { cpu:first.cpu, gpu:first.gpu, ram:first.ram, image:first.image, fps: 'Под вашу задачу' } : {}), href: first ? line.href : '/#cta', price: first ? `от ${formatPrice(first.price)}` : 'Под заказ' };
+    });
     /* По умолчанию раскрыт CANVAS: середина линейки показывает и потолок, и вход */
     const [active, setActive] = useState(2);
 
@@ -39,7 +47,7 @@ export function LabSeries() {
 
                 <Reveal delay={240}>
                     <div className="mt-6 flex flex-col gap-3 lg:h-[540px] lg:flex-row">
-                        {LINEUP.map((build, index) => {
+                        {lineup.map((build, index) => {
                             const isActive = index === active;
                             return (
                                 <article
@@ -131,7 +139,7 @@ export function LabSeries() {
                                                     {build.name}
                                                 </h3>
                                                 {build.hit && (
-                                                    <span className="rounded bg-gradient-to-r from-ember to-[#D9A35C] px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-white shadow-ember">
+                                                    <span className="rounded bg-gradient-to-r from-ember to-[#D9A35C] px-2 py-1 font-mono text-[9px] font-bold uppercase tracking-[0.2em] text-ink shadow-ember">
                                                         Хит
                                                     </span>
                                                 )}
@@ -164,7 +172,7 @@ export function LabSeries() {
                                                 <Link
                                                     href={build.href}
                                                     onClick={(event) => event.stopPropagation()}
-                                                    className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-4 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110"
+                                                    className="inline-flex items-center gap-1.5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-4 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110"
                                                 >
                                                     Смотреть линейку
                                                     <GlyphArrowUpRight className="h-3.5 w-3.5" />
@@ -187,7 +195,7 @@ export function LabSeries() {
                             href="/#cta"
                             className="group mt-2 inline-flex items-center gap-2 font-mono text-[11px] font-semibold uppercase tracking-[0.28em] text-ash transition-colors hover:text-flame"
                         >
-                            PROTOCOL — сборка под заказ от 150 000 ₽
+                            PROTOCOL — индивидуальная сборка
                             <GlyphArrowUpRight className="h-4 w-4 transition-transform duration-300 group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
                         </Link>
                     </div>

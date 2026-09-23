@@ -241,12 +241,12 @@ export function Passport() {
                                                 {"// ПК Паспорт"}
                                             </div>
                                             <div className="mt-1 font-display text-[22px] font-extrabold tracking-wide text-bone">
-                                                №310-2847
+                                                Пример паспорта
                                             </div>
                                         </div>
                                     </div>
                                     <span className="rotate-6 rounded border-2 border-ember/70 px-2.5 py-1 font-mono text-[11px] font-bold uppercase tracking-[0.24em] text-ember">
-                                        Certified
+                                        Образец
                                     </span>
                                 </div>
 

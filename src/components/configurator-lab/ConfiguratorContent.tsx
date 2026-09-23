@@ -1,5 +1,10 @@
 'use client'
 
+import { useConfigurationQuote } from './useConfigurationQuote'
+import { Modal } from '@/components/ui/Modal'
+import { useCommerce } from '@/components/catalog-lab/CommerceProvider'
+import { selectionComponents, type PublicCommerce } from '@/lib/commerce/model'
+import { restoreSavedBuild, SAVED_BUILD_ID } from '@/lib/configurator/saved-build'
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useSearchParams } from 'next/navigation'
 import { MobileCtaBar } from '@/components/layout/MobileCtaBar'
@@ -12,19 +17,19 @@ import {
 } from '@/components/ui/lab-icons'
 import { EmberButton, Reveal, SectionLabel } from '@/components/ui/primitives'
 import {
-  BUILD_COMPONENTS,
   DEFAULT_CONFIGURATOR_BUILD_ID,
   formatPrice,
   getBuildById,
   type BuildComponentIds,
   type CatalogBuild,
 } from '@/lib/data/lab-catalog'
-import { componentsDB, type ComponentCategory, type PCComponent } from '@/lib/data/components'
+import { type ComponentCategory, type PCComponent } from '@/lib/data/components'
 import {
   buildMinimumConfiguration,
   CONFIGURATOR_MINIMUM_RETAIL_PRICE,
   formatPriceDelta,
   getComponentPriceDelta,
+  refreshSelectionPrices,
   isConfigurationComplete,
   isConfiguratorOptionalChoice,
   type ConfiguratorPricingBase,
@@ -65,7 +70,6 @@ const CATEGORY_LABELS: Record<ComponentCategory, string> = {
   case: 'Корпус',
 }
 
-const FPS_GAME_ORDER = ['CS2', 'Dota 2', 'Cyberpunk 2077', 'Warzone', 'RUST', 'GTA V', 'Hogwarts Legacy']
 
 /* ---------- Состояние страницы (без zustand) ---------- */
 
@@ -84,7 +88,7 @@ type PageAction =
   | { type: 'dismiss-notice' }
   | { type: 'reset'; selection: SelectedComponents }
 
-function reducer(state: PageState, action: PageAction): PageState {
+function reducer(state: PageState, action: PageAction, componentsDB: PCComponent[]): PageState {
   switch (action.type) {
     case 'select': {
       const { selection, warning } = selectComponent(
@@ -122,7 +126,7 @@ function reducer(state: PageState, action: PageAction): PageState {
 }
 
 /* Сборка выбора из карты компонентов сборки каталога */
-function selectionFromBuildIds(ids: BuildComponentIds): SelectedComponents {
+function selectionFromBuildIds(ids: BuildComponentIds, componentsDB: PCComponent[]): SelectedComponents {
   const find = (id: string) => componentsDB.find((c) => c.id === id) || null
   return {
     cpu: find(ids.cpu),
@@ -136,13 +140,14 @@ function selectionFromBuildIds(ids: BuildComponentIds): SelectedComponents {
   }
 }
 
-function createInitialState(buildId: string | null): { state: PageState; pricingBase: ConfiguratorPricingBase } {
+function createInitialState(buildId: string | null, commerce: PublicCommerce): { state: PageState; pricingBase: ConfiguratorPricingBase } {
+  const componentsDB = selectionComponents(commerce)
   /* Вход со страницы сборки (?build=...) или базовая сборка по умолчанию */
-  const build = getBuildById(buildId ?? DEFAULT_CONFIGURATOR_BUILD_ID)
-  const ids = build ? BUILD_COMPONENTS[build.id] : undefined
+  const build = getBuildById(buildId ?? DEFAULT_CONFIGURATOR_BUILD_ID, commerce.catalog) ?? commerce.catalog[0]
+  const ids = build ? commerce.parts[build.id] : undefined
 
   if (build && ids) {
-    const selection = selectionFromBuildIds(ids)
+    const selection = selectionFromBuildIds(ids, componentsDB)
     if (isConfigurationComplete(selection)) {
       return {
         state: { selection, warning: null, notice: null },
@@ -287,7 +292,6 @@ function ComponentRow({
 }) {
   return (
     <div
-      onClick={onSelect}
       data-component-id={comp.id}
       data-category={category}
       className={cn(
@@ -295,7 +299,8 @@ function ComponentRow({
         selected ? 'border-ember/50 bg-ember/[0.08]' : 'border-line bg-ink/40 hover:border-white/20 hover:bg-white/[0.03]',
       )}
     >
-      <div className="flex min-w-0 items-center gap-3">
+      <button type="button" onClick={onSelect} aria-pressed={selected} aria-label={`${comp.name}: ${selected ? 'выбрано' : 'выбрать'}`}
+        className="flex min-h-11 min-w-0 flex-1 items-center gap-3 text-left">
         {/* radio / checkbox */}
         <span
           className={cn(
@@ -326,7 +331,7 @@ function ComponentRow({
             {Object.values(comp.specs || {}).slice(0, 3).join(' · ')}
           </span>
         </div>
-      </div>
+      </button>
       <div className="flex shrink-0 items-center gap-2 sm:gap-3">
         <span
           className={cn(
@@ -348,7 +353,7 @@ function ComponentRow({
             onInfo()
           }}
           aria-label={`Подробнее: ${comp.name}`}
-          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
+          className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
         >
           <span className="font-serif text-xs italic leading-none">i</span>
         </button>
@@ -359,24 +364,79 @@ function ComponentRow({
 
 /* ---------- Страница ---------- */
 
+type InitialConfiguration = ReturnType<typeof createInitialState>
+
 export function ConfiguratorContent() {
-  const searchParams = useSearchParams()
-  const [{ state: initialState, pricingBase }] = useState(() => createInitialState(searchParams.get('build')))
-  const [pageState, dispatch] = useReducer(reducer, initialState)
+  const commerce = useCommerce()
+  const params = useSearchParams()
+  const buildId = params.get('build')
+  if (buildId && !getBuildById(buildId, commerce.catalog)) return <SavedConfigurator key={buildId} id={buildId} />
+  return <ConfiguratorEditor key={buildId ?? 'default'} initial={createInitialState(buildId, commerce)} />
+}
+
+function SavedConfigurator({ id }: { id: string }) {
+  const commerce = useCommerce()
+  const [result, setResult] = useState<{ initial?: InitialConfiguration; error?: string }>({})
+  useEffect(() => {
+    if (!SAVED_BUILD_ID.test(id)) return
+    const controller = new AbortController()
+    async function load() {
+      try {
+        const response = await fetch(`/api/builds/${encodeURIComponent(id)}`, { signal: controller.signal })
+        const data = await response.json()
+        if (!response.ok) throw new Error(data.error || 'Не удалось загрузить сборку.')
+        const restored = restoreSavedBuild(data.components, commerce)
+        setResult({ initial: { state: { selection: restored.selection, warning: null, notice: null }, pricingBase: restored.pricingBase } })
+      } catch (error) {
+        if (!controller.signal.aborted) setResult({ error: error instanceof Error ? error.message : 'Не удалось загрузить сборку.' })
+      }
+    }
+    void load()
+    return () => controller.abort()
+  }, [id, commerce])
+  if (result.initial) return <ConfiguratorEditor initial={result.initial} />
+  const error = !SAVED_BUILD_ID.test(id) ? 'Ссылка на сборку некорректна.' : result.error
+  return <section className="mx-auto min-h-[60vh] w-full max-w-7xl px-5 pb-20 pt-36 lg:px-8">
+    <h1 className="font-display text-2xl text-bone">{error ? 'Не удалось открыть сборку' : 'Загружаем вашу сборку'}</h1>
+    <p role="status" className="my-6 text-ash">{error || 'Восстанавливаем комплектующие. Цена будет пересчитана по текущему каталогу.'}</p>
+    {error && <EmberButton href="/configurator">Выбрать новую сборку</EmberButton>}
+  </section>
+}
+
+function ConfiguratorEditor({ initial }: { initial: InitialConfiguration }) {
+  const commerce = useCommerce()
+  const componentsDB = commerce.components
+  const { state: initialState } = initial
+  const [pageState, dispatch] = useReducer((state: PageState, action: PageAction) => reducer({ ...state, selection: refreshSelectionPrices(state.selection, componentsDB) }, action, componentsDB), initialState)
+  const pricingBase = useMemo(() => {
+    const base = { ...initial.pricingBase, selectedComponents: refreshSelectionPrices(initial.pricingBase.selectedComponents, componentsDB) }
+    const build = commerce.catalog.find((b) => b.id === base.id)
+    if (build && commerce.parts[build.id]) {
+      base.selectedComponents = selectionFromBuildIds(commerce.parts[build.id], componentsDB)
+      base.retailPrice = build.price
+    }
+    return base
+  }, [initial.pricingBase, componentsDB, commerce])
   const [activeCategory, setActiveCategory] = useState<ComponentCategory>('gpu')
   const [infoComponent, setInfoComponent] = useState<PCComponent | null>(null)
   const [orderOpen, setOrderOpen] = useState(false)
 
   const [sharing, setSharing] = useState(false)
   const [shareState, setShareState] = useState<'idle' | 'copied'>('idle')
+  const [shareUrl, setShareUrl] = useState('')
+  const [shareError, setShareError] = useState('')
 
-  const { selection, warning, notice } = pageState
+  const { warning, notice } = pageState
+  const selection = useMemo(() => refreshSelectionPrices(pageState.selection, componentsDB), [pageState.selection, componentsDB])
 
   /* Сохранение конфигурации по ссылке: тот же обработчик, что и раньше
      (/api/builds), чтобы старые сохранённые сборки продолжали открываться. */
   const onShare = async () => {
     if (sharing) return
     setSharing(true)
+    setShareError('')
+    setShareState('idle')
+    setShareUrl('')
     try {
       const payload = Object.fromEntries(
         Object.entries(selection).map(([category, value]) => [
@@ -387,44 +447,40 @@ export function ConfiguratorContent() {
       const response = await fetch('/api/builds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ components: payload, totalPrice: metrics.price }),
+        body: JSON.stringify({ components: { ...payload, _pricingBaseId: pricingBase.id } }),
       })
       const data = await response.json()
-      if (data?.id) {
-        const url = `${window.location.origin}/configurator?build=${data.id}`
-        await navigator.clipboard.writeText(url).catch(() => undefined)
+      if (!response.ok || !data?.id) throw new Error(data.error || 'Не удалось сохранить ссылку.')
+      const url = `${window.location.origin}/configurator?build=${data.id}`
+      setShareUrl(url)
+      try {
+        await navigator.clipboard.writeText(url)
         setShareState('copied')
-        window.setTimeout(() => setShareState('idle'), 2500)
+      } catch {
+        // The visible field below remains available when clipboard access is denied.
       }
-    } catch {
-      /* Молча: сохранение ссылки — вспомогательное действие, оно не должно
-         прерывать сборку. Заявку всегда можно отправить и без ссылки. */
+    } catch (error) {
+      setShareError(error instanceof Error ? error.message : 'Не удалось сохранить ссылку. Попробуйте ещё раз.')
     } finally {
       setSharing(false)
     }
   }
 
   // Пакет замен, который вылечит текущие конфликты (для кнопки «Исправить автоматически»)
-  const autoFixSuggestions = useMemo(() => buildAutoFixSuggestions(componentsDB, selection), [selection])
+  const autoFixSuggestions = useMemo(() => buildAutoFixSuggestions(componentsDB, selection), [selection, componentsDB])
 
-  // Блокировка скролла под модалками
-  useEffect(() => {
-    if (warning || infoComponent) {
-      document.body.style.overflow = 'hidden'
-      return () => {
-        document.body.style.overflow = ''
-      }
-    }
-  }, [warning, infoComponent])
-
-  const metrics = useMemo(() => calculateMetrics(selection, pricingBase), [selection, pricingBase])
+  const serverPricing = commerce.mode === 'server'
+  const quote = useConfigurationQuote(selection, pricingBase.id, commerce.revision, serverPricing && isConfigurationComplete(selection))
+  const priceReady = !serverPricing || quote.price !== null
+  const metrics = useMemo(() => ({ ...calculateMetrics(selection, pricingBase),
+    ...(serverPricing ? { price: quote.price ?? 0 } : {}) }), [selection, pricingBase, serverPricing, quote.price])
   const errors = useMemo(() => checkCompatibility(selection, pricingBase), [selection, pricingBase])
   const isComplete = isConfigurationComplete(selection)
   const hasErrors = errors.some((e) => e.type === 'error')
 
   const categoryComponents = useMemo(
     () => componentsDB.filter((c) => c.category === activeCategory && (c.price > 0 || isConfiguratorOptionalChoice(c))),
-    [activeCategory],
+    [activeCategory, componentsDB],
   )
   const tabs = useCategoryTabs(activeCategory, categoryComponents)
 
@@ -436,9 +492,7 @@ export function ConfiguratorContent() {
       ? [selectedValue.id]
       : []
 
-  const fpsEntries = FPS_GAME_ORDER.filter((g) => metrics.fps[g] !== undefined).map((g) => [g, metrics.fps[g]] as const)
   const psuLoadClamped = Math.min(100, Math.round(metrics.psuLoad))
-  const monthly = formatPrice(Math.round(metrics.price / 12 / 100) * 100)
   const orderBuild = useMemo(() => toOrderBuild(selection, metrics.price, metrics.fps), [selection, metrics])
 
   /* Состав сборки для сообщения мастеру: без него в Telegram приходит
@@ -502,7 +556,7 @@ export function ConfiguratorContent() {
       <div className="mt-4 flex flex-col gap-1.5">
         {tabs.filtered.map((comp) => {
           const isSelected = selectedIds.includes(comp.id)
-          const delta = getComponentPriceDelta(comp, activeCategory, selection, pricingBase)
+          const delta = (serverPricing ? quote.options[comp.id] ?? null : getComponentPriceDelta(comp, activeCategory, selection, pricingBase))
           const deltaLabel =
             delta === null
               ? isMultiple && selectedIds.length > 0
@@ -535,11 +589,11 @@ export function ConfiguratorContent() {
         </div>
         <div className="mt-2 flex items-end justify-between gap-3">
           <div className="font-mono text-2xl font-bold text-gradient lg:text-[1.7rem]">
-            {isComplete ? formatPrice(metrics.price) : '—'}
+            {isComplete ? (priceReady ? formatPrice(metrics.price) : quote.error ? 'Цена недоступна' : 'Считаем…') : '—'}
           </div>
-          {isComplete && (
+          {isComplete && priceReady && (
             <div className="pb-0.5 font-mono text-[10px] uppercase tracking-[0.1em] text-ash">
-              от {monthly}/мес
+              После согласования
             </div>
           )}
         </div>
@@ -548,6 +602,7 @@ export function ConfiguratorContent() {
         </div>
       </div>
 
+      {quote.error && serverPricing && <p role="alert" className="px-5 pt-4 text-sm text-ash">{quote.error} <button className="text-flame underline" onClick={quote.retry}>Повторить расчёт</button></p>}
       <div className="px-5 py-5 sm:px-6">
         {/* Состав */}
         <ul className="space-y-2">
@@ -589,26 +644,6 @@ export function ConfiguratorContent() {
           </div>
         </div>
 
-        {/* FPS */}
-        {fpsEntries.length > 0 && (
-          <div className="mt-5 border-t border-line pt-4">
-            <div className="mb-3 flex items-center gap-2 font-mono text-[9px] font-semibold uppercase tracking-[0.22em] text-ash">
-              <Icon name="gamepad" className="h-3.5 w-3.5 text-ember" />
-              Оценка FPS
-            </div>
-            <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-3 lg:grid-cols-2 xl:grid-cols-3">
-              {fpsEntries.slice(0, 6).map(([game, fps]) => (
-                <div key={game} className="min-w-0">
-                  <div className="truncate text-[10px] text-ash/80">{game}</div>
-                  <div className="font-mono text-[13px] font-bold text-bone">
-                    {fps} <span className="text-[9px] font-medium text-ash/60">fps</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
         {/* Совместимость */}
         <div className="mt-5 space-y-2 border-t border-line pt-4" data-testid="compatibility-status">
           {errors.length === 0 ? (
@@ -635,7 +670,7 @@ export function ConfiguratorContent() {
               {hasErrors && autoFixSuggestions.length > 0 && (
                 <button
                   onClick={() => dispatch({ type: 'auto-fix' })}
-                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-ember/50 bg-ember/10 px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-flame transition-all duration-300 hover:bg-ember hover:text-white hover:shadow-ember active:scale-[0.98]"
+                  className="flex w-full items-center justify-center gap-2 rounded-lg border border-ember/50 bg-ember/10 px-4 py-3 font-display text-[11px] font-semibold uppercase tracking-[0.12em] text-flame transition-all duration-300 hover:bg-ember hover:text-ink hover:shadow-ember active:scale-[0.98]"
                 >
                   <Icon name="wrench" className="h-4 w-4" />
                   Исправить автоматически
@@ -664,7 +699,8 @@ export function ConfiguratorContent() {
         <div className="mt-5 flex flex-col gap-2.5">
           <EmberButton
             onClick={() => setOrderOpen(true)}
-            className={cn('w-full', (hasErrors || !isComplete) && 'pointer-events-none opacity-40')}
+            className="w-full"
+            disabled={hasErrors || !isComplete || !priceReady}
           >
             Оформить заявку
             <GlyphArrowUpRight className="h-4 w-4" />
@@ -682,11 +718,17 @@ export function ConfiguratorContent() {
           </button>
           <button
             onClick={onShare}
-            disabled={sharing || !isComplete}
+            disabled={sharing || !isComplete || hasErrors || !priceReady}
             className="inline-flex items-center justify-center gap-2 rounded-md px-7 py-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.2em] text-ash transition-colors duration-300 hover:text-flame disabled:pointer-events-none disabled:opacity-40"
           >
             {shareState === 'copied' ? 'Ссылка скопирована' : sharing ? 'Сохраняем…' : 'Поделиться сборкой'}
           </button>
+          {shareError && <p role="alert" className="text-sm text-flame">{shareError}</p>}
+          {shareUrl && <label className="block text-xs text-ash">
+            {shareState === 'copied' ? 'Ссылка скопирована' : 'Скопируйте ссылку на сборку'}
+            <input aria-label="Ссылка на сборку" readOnly value={shareUrl} onFocus={(event) => event.currentTarget.select()}
+              className="mt-2 w-full min-w-0 rounded border border-line bg-ink px-3 py-3 text-xs text-bone" />
+          </label>}
         </div>
         <div className="mt-4 flex items-center justify-center gap-2 font-mono text-[8px] uppercase tracking-[0.18em] text-ash/70">
           <Icon name="check" className="h-3 w-3 text-ember" />
@@ -705,7 +747,7 @@ export function ConfiguratorContent() {
               <SectionLabel index="Конфигуратор" text="Соберите свою систему" />
             </Reveal>
             <Reveal delay={80}>
-              <h1 className="mt-6 max-w-3xl font-display text-[clamp(1.8rem,5vw,3.4rem)] font-bold uppercase leading-[1.05] tracking-tight text-bone">
+              <h1 className="mt-6 max-w-3xl font-display text-[clamp(1.25rem,5.8vw,3.4rem)] font-bold uppercase leading-[1.05] tracking-tight text-bone">
                 Конфигуратор <span className="text-gradient">по комплектующим</span>
               </h1>
             </Reveal>
@@ -810,13 +852,14 @@ export function ConfiguratorContent() {
         </section>
       </div>
       <MobileCtaBar
-        primaryLabel={isComplete ? `Заказать · ${formatPrice(metrics.price)}` : 'Заказать сборку'}
+        primaryLabel={isComplete && priceReady ? `Заказать · ${formatPrice(metrics.price)}` : 'Заказать сборку'}
         onPrimaryClick={() => setOrderOpen(true)}
+        primaryDisabled={hasErrors || !isComplete || !priceReady}
         secondaryHref={null}
       />
 
       <OrderModal
-        build={orderOpen ? orderBuild : null}
+        build={orderOpen && priceReady ? orderBuild : null}
         onClose={() => setOrderOpen(false)}
         source="configurator"
         config={leadConfig}
@@ -824,13 +867,7 @@ export function ConfiguratorContent() {
 
       {/* ---------- Модалка совместимости / авто-замены ---------- */}
       {warning && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/80 p-4 backdrop-blur-md"
-          onClick={() => dispatch({ type: 'cancel-replace' })}
-          role="dialog"
-          aria-modal="true"
-          data-testid="compatibility-warning"
-        >
+        <Modal label={getWarningTitle(warning.suggestions)} onClose={() => dispatch({ type: 'cancel-replace' })} testId="compatibility-warning">
           <div
             className="w-full max-w-lg overflow-hidden rounded-xl border border-ember/35 bg-coal shadow-card"
             onClick={(e) => e.stopPropagation()}
@@ -890,7 +927,7 @@ export function ConfiguratorContent() {
                   <button
                     onClick={() => dispatch({ type: 'confirm-replace' })}
                     data-testid="confirm-replace"
-                    className="flex-1 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+                    className="flex-1 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
                   >
                     {warning.suggestions.length > 1 ? 'Применить замены' : 'Применить замену'}
                   </button>
@@ -904,24 +941,19 @@ export function ConfiguratorContent() {
               ) : (
                 <button
                   onClick={() => dispatch({ type: 'cancel-replace' })}
-                  className="w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+                  className="w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
                 >
                   Понятно
                 </button>
               )}
             </div>
           </div>
-        </div>
+        </Modal>
       )}
 
       {/* ---------- Инфо-модалка компонента ---------- */}
       {infoComponent && (
-        <div
-          className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/80 p-4 backdrop-blur-md"
-          onClick={() => setInfoComponent(null)}
-          role="dialog"
-          aria-modal="true"
-        >
+        <Modal label={infoComponent.name} onClose={() => setInfoComponent(null)}>
           <div
             className="w-full max-w-md overflow-hidden rounded-xl border border-line bg-coal shadow-card"
             onClick={(e) => e.stopPropagation()}
@@ -936,7 +968,7 @@ export function ConfiguratorContent() {
               <button
                 onClick={() => setInfoComponent(null)}
                 aria-label="Закрыть"
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
+                className="flex h-11 w-11 shrink-0 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
               >
                 <GlyphClose className="h-4 w-4" />
               </button>
@@ -957,7 +989,7 @@ export function ConfiguratorContent() {
                   <span className="font-mono text-[9px] uppercase tracking-[0.18em] text-ash">Изменение цены</span>
                   <span className="font-mono font-semibold text-gradient">
                     {(() => {
-                      const d = getComponentPriceDelta(infoComponent, infoComponent.category, selection, pricingBase)
+                      const d = (serverPricing ? quote.options[infoComponent.id] ?? null : getComponentPriceDelta(infoComponent, infoComponent.category, selection, pricingBase))
                       return d === null ? '—' : formatPriceDelta(d, '0 ₽')
                     })()}
                   </span>
@@ -968,13 +1000,13 @@ export function ConfiguratorContent() {
                   handleSelect(infoComponent.category, infoComponent.id)
                   setInfoComponent(null)
                 }}
-                className="mt-6 w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
+                className="mt-6 w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98]"
               >
                 Выбрать этот компонент
               </button>
             </div>
           </div>
-        </div>
+        </Modal>
       )}
     </>
   )

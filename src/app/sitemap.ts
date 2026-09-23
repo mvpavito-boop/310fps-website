@@ -1,21 +1,23 @@
 import { MetadataRoute } from "next";
-import { getAllCatalogPcIds } from "@/lib/data/catalog";
+import { getPublicCommerce } from "@/lib/commerce/server";
 import { getAllGuides } from "@/lib/data/guides";
 import { getAllGamingPcLandings } from "@/lib/data/gaming-pc-pages";
-import { getAllSeriesSlugs } from "@/lib/data/lab-series";
+import { getAllSeriesPages } from "@/lib/data/lab-series";
 import { absoluteUrl } from "@/lib/site-config";
 
-export default function sitemap(): MetadataRoute.Sitemap {
+export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     const now = new Date();
+    const commerce = await getPublicCommerce();
+    const { catalog } = commerce;
 
-    const catalogEntries: MetadataRoute.Sitemap = getAllCatalogPcIds().map((id) => ({
-        url: absoluteUrl(`/catalog/${id}`),
+    const catalogEntries: MetadataRoute.Sitemap = catalog.map((build) => ({
+        url: absoluteUrl(`/catalog/${build.id}`),
         lastModified: now,
         changeFrequency: "weekly" as const,
         priority: 0.8,
     }));
 
-    const seriesEntries: MetadataRoute.Sitemap = getAllSeriesSlugs().map((slug) => ({
+    const seriesEntries: MetadataRoute.Sitemap = getAllSeriesPages(commerce).map(({ slug }) => ({
         url: absoluteUrl(`/series/${slug}`),
         lastModified: now,
         changeFrequency: "weekly" as const,

@@ -1,4 +1,6 @@
 import { ANALYTICS_GOALS, trackGoal } from "@/lib/analytics";
+import { captureLeadAttribution } from "@/lib/lead-attribution";
+import type { LeadConsent } from "@/lib/lead-consent";
 
 /* Единая точка отправки заявок с сайта. Все формы (главная, каталог,
    конфигуратор) ходят сюда, чтобы обработка ошибок и лимитов была одинаковой. */
@@ -14,18 +16,20 @@ export type LeadPayload = {
     model_title?: string;
     price_from?: number;
     config?: Record<string, string>;
+    consent: LeadConsent;
 };
 
 export type LeadResult = { ok: true; leadId?: string } | { ok: false; error: string };
 
-const GENERIC_ERROR = "Не удалось отправить заявку. Напишите нам в Telegram — ответим сразу.";
+const GENERIC_ERROR = "Не удалось отправить заявку. Напишите нам в Telegram — мастер ответит в рабочее время.";
 
 export async function submitLead(payload: LeadPayload): Promise<LeadResult> {
     try {
         const response = await fetch("/api/telegram/lead", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
+            body: JSON.stringify({ ...payload, attribution: captureLeadAttribution() }),
+            signal: AbortSignal.timeout(30_000),
         });
 
         /* 429 приходит от rate-limit: пять заявок за пять минут с одного IP */

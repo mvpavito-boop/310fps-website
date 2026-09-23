@@ -35,6 +35,9 @@ async function signToken(token: string, secret: string) {
 }
 
 function redirectToLogin(request: NextRequest) {
+    if (request.nextUrl.pathname.startsWith('/api/admin/')) {
+        return NextResponse.json({ error: 'Требуется вход в панель управления.' }, { status: 401 });
+    }
     const loginUrl = new URL('/admin/login', request.url);
     loginUrl.searchParams.set('from', request.nextUrl.pathname);
     return NextResponse.redirect(loginUrl);
@@ -44,7 +47,7 @@ export async function proxy(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Пропускаем страницу логина и API логина
-    if (pathname === '/admin/login' || pathname.startsWith('/api/admin/login')) {
+    if (pathname === '/admin/login' || pathname === '/api/admin/login') {
         return NextResponse.next();
     }
 

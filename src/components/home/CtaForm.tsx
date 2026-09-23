@@ -1,11 +1,12 @@
 "use client";
 
-import Link from "next/link";
 import { useState, type FormEvent } from "react";
 import { GlyphChevronDown, Icon, IconTile } from "@/components/ui/lab-icons";
 import { Reveal, SectionLabel } from "@/components/ui/primitives";
 import { siteConfig } from "@/lib/site-config";
 import { submitLead } from "@/lib/submit-lead";
+import { LeadConsent } from "@/components/ui/LeadConsent";
+import { LEAD_CONSENT_VERSION } from "@/lib/lead-consent";
 
 /* 24 частицы: позиция, размер и тайминг детерминированы — иначе разметка
    на сервере и на клиенте разойдётся. */
@@ -40,6 +41,10 @@ export function CtaForm() {
         const name = String(data.get("name") || "").trim();
         const contact = String(data.get("contact") || "").trim();
         const task = String(data.get("task") || "").trim();
+        if (data.get("consent") !== "on") {
+            setError("Подтвердите согласие на обработку персональных данных.");
+            return;
+        }
 
         if (!name || !contact) {
             setError("Заполните имя и контакт — иначе мы не сможем ответить.");
@@ -54,6 +59,7 @@ export function CtaForm() {
             phone: contact,
             message: task ? `Задача: ${task}` : "",
             source: "home_cta_form",
+            consent: { accepted: true, version: LEAD_CONSENT_VERSION },
         });
 
         setPending(false);
@@ -160,8 +166,7 @@ export function CtaForm() {
                                     Заявка принята
                                 </div>
                                 <p className="max-w-xs text-[13px] leading-relaxed text-ash">
-                                    Мастер свяжется с вами в течение 30 минут в рабочее время.
-                                    Проверьте Telegram.
+                                    Мастер свяжется с вами по указанному контакту в рабочее время.
                                 </p>
                             </div>
                         ) : (
@@ -233,11 +238,12 @@ export function CtaForm() {
                                     </p>
                                 )}
 
+                                <LeadConsent />
                                 <button
                                     type="submit"
                                     disabled={pending}
                                     data-analytics-goal="cta_form_submit"
-                                    className="cta-pulse group relative w-full overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-7 py-4 font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-white transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
+                                    className="cta-pulse group relative w-full overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-7 py-4 font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-ink transition-all duration-300 hover:brightness-110 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-60"
                                 >
                                     <span className="absolute inset-0 -translate-x-full bg-gradient-to-r from-transparent via-white/25 to-transparent transition-transform duration-700 group-hover:translate-x-full" />
                                     <span className="relative z-10 inline-flex items-center gap-2.5">
@@ -246,10 +252,10 @@ export function CtaForm() {
                                 </button>
 
                                 <p className="text-center text-[12px] leading-relaxed text-ash">
-                                    Отвечает мастер, а не колл-центр. SLA 30 минут в рабочее время.
+                                    Мастер ответит в рабочее время и уточнит детали вашей задачи.
                                 </p>
                                 <a
-                                    href={siteConfig.telegramUrl}
+                                    href={siteConfig.telegramDirectUrl}
                                     target="_blank"
                                     rel="noopener noreferrer"
                                     data-analytics-goal="cta_telegram_click"
@@ -261,12 +267,7 @@ export function CtaForm() {
                                     />
                                     Или напишите нам в Telegram — отвечаем быстро
                                 </a>
-                                <p className="text-center text-[11px] leading-relaxed text-ash/70">
-                                    Нажимая кнопку, вы соглашаетесь с{" "}
-                                    <Link href="/privacy" className="text-flame/80 underline-offset-2 hover:underline">
-                                        политикой конфиденциальности
-                                    </Link>
-                                </p>
+
                             </form>
                         )}
                     </div>

@@ -117,7 +117,7 @@ export function ScrollTimelineV2() {
                                 {/* Content */}
                                 <div className={cn("pl-20", index % 2 === 0 ? "lg:pl-0 lg:pr-20 lg:[direction:ltr]" : "lg:pl-20")}>
                                     <div className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ember">
-                                        // {item.year}
+                                        {"// "}{item.year}
                                     </div>
                                     <h3 className="mt-2 font-display text-[clamp(1.3rem,2.5vw,1.8rem)] font-bold uppercase tracking-tight text-bone">
                                         {item.title}

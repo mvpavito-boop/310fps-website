@@ -16,12 +16,28 @@ function HeroVideo() {
         const video = ref.current;
         if (!video) return;
 
-        const mobile = window.matchMedia("(max-width: 1023px)").matches;
-        video.poster = mobile ? "/videos/hero-mobile-poster.jpg" : "/videos/hero-poster.jpg";
-        video.src = mobile ? "/videos/hero-mobile-loop.mp4" : "/videos/hero-loop.mp4";
-
-        /* Автовоспроизведение может быть отклонено браузером — тогда остаётся постер */
-        video.play().catch(() => undefined);
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
+        const mobileViewport = window.matchMedia("(max-width: 1023px)");
+        const update = () => {
+            const mobile = mobileViewport.matches;
+            video.poster = mobile ? "/videos/hero-mobile-poster.jpg" : "/videos/hero-poster.jpg";
+            if (reducedMotion.matches) {
+                video.pause();
+                video.removeAttribute("src");
+                video.load();
+                return;
+            }
+            video.src = mobile ? "/videos/hero-mobile-loop.mp4" : "/videos/hero-loop.mp4";
+            video.play().catch(() => undefined);
+        };
+        update();
+        reducedMotion.addEventListener("change", update);
+        mobileViewport.addEventListener("change", update);
+        return () => {
+            reducedMotion.removeEventListener("change", update);
+            mobileViewport.removeEventListener("change", update);
+            video.pause();
+        };
     }, []);
 
     return (
@@ -154,7 +170,7 @@ export function Hero() {
                         <EmberButton href="/#cta" data-analytics-goal="hero_order_click">
                             Заказать ПК
                         </EmberButton>
-                        <GhostButton href={siteConfig.telegramUrl} data-analytics-goal="hero_telegram_click">
+                        <GhostButton href={siteConfig.telegramDirectUrl} data-analytics-goal="hero_telegram_click">
                             Написать в Telegram
                         </GhostButton>
                     </div>

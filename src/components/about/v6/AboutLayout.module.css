@@ -1,0 +1,47 @@
+/* The same 80rem container and 20/32px gutters as the homepage. */
+.container {
+    width: 100%;
+    max-width: 80rem;
+    margin-inline: auto;
+    padding-inline: 20px;
+}
+
+.section { padding-block: 96px; }
+
+.section .title {
+    font-size: clamp(28px, 3vw, 42px);
+    font-weight: 700;
+    line-height: 1.22;
+    letter-spacing: -.045em;
+    text-wrap: balance;
+}
+
+.eyebrow {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px !important;
+    color: var(--color-ember);
+    font-size: 12px;
+    font-weight: 600;
+    line-height: 1.5 !important;
+}
+
+.eyebrow::before {
+    content: "";
+    width: 18px;
+    height: 8px;
+    flex-shrink: 0;
+    border-left: 1px solid currentColor;
+    border-top: 1px solid currentColor;
+}
+
+@media (min-width: 1024px) {
+    .container { padding-inline: 32px; }
+}
+
+@media (max-width: 760px) {
+    .section { padding-block: 56px; }
+    .section .title { font-size: clamp(20px, 5.6vw, 30px); line-height: 1.25; }
+    .eyebrow { font-size: 11px; margin-bottom: 16px !important; }
+}

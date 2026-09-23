@@ -10,6 +10,8 @@ import { Toaster } from "sonner";
 import { absoluteUrl, siteConfig } from "@/lib/site-config";
 import { AnalyticsEvents } from "@/components/analytics/AnalyticsEvents";
 import { YandexMetrika } from "@/components/analytics/YandexMetrika";
+import { CommerceProvider } from "@/components/catalog-lab/CommerceProvider";
+import { getPublicCommerce } from "@/lib/commerce/server";
 
 /* Дисплейный шрифт: заголовки секций и hero. Кириллица и цифры есть. */
 const unbounded = Unbounded({
@@ -73,11 +75,12 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const commerce = await getPublicCommerce();
   return (
     <html lang="ru" className={`${unbounded.variable} ${manrope.variable} ${jetbrainsMono.variable}`} suppressHydrationWarning>
       <body
@@ -147,6 +150,7 @@ export default function RootLayout({
             })
           }}
         />
+        <CommerceProvider initial={commerce}>
         <BootOverlay />
         <Header />
         <main className="flex-grow flex flex-col">
@@ -159,6 +163,7 @@ export default function RootLayout({
         <AnalyticsEvents />
         <YandexMetrika />
         <Toaster position="bottom-right" theme="dark" richColors />
+        </CommerceProvider>
       </body>
     </html>
   );

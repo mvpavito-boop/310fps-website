@@ -50,7 +50,7 @@ export function ManifestV2() {
                                     <div className="relative z-10 flex items-start justify-between">
                                         <IconTile name={item.icon} className="h-12 w-12 rounded-lg" iconClassName="h-6 w-6" />
                                         <span className="font-mono text-[11px] font-bold uppercase tracking-[0.2em] text-ember/60">
-                                            // {item.num}
+                                            {"// "}{item.num}
                                         </span>
                                     </div>
                                     <h3 className="relative z-10 mt-7 font-display text-[clamp(1.1rem,2vw,1.4rem)] font-bold uppercase tracking-tight text-bone">

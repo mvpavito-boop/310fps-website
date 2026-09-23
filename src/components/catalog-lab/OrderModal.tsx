@@ -1,8 +1,10 @@
 'use client'
 
+import { Modal } from '@/components/ui/Modal'
 import Image from 'next/image'
-import Link from 'next/link'
-import { useEffect, useState, type FormEvent } from 'react'
+import { LeadConsent } from '@/components/ui/LeadConsent'
+import { LEAD_CONSENT_VERSION } from '@/lib/lead-consent'
+import { useState, type FormEvent } from 'react'
 import { GlyphClose, Icon } from '@/components/ui/lab-icons'
 import { formatPrice, type CatalogBuild } from '@/lib/data/lab-catalog'
 import { submitLead } from '@/lib/submit-lead'
@@ -22,30 +24,16 @@ export function OrderModal({
   /* Полный состав сборки: уходит отдельным блоком в сообщение мастеру */
   config?: Record<string, string>
 }) {
+  if (!build) return null
+  return <OrderDialog key={build.id} build={build} onClose={onClose} source={source} config={config} />
+}
+
+function OrderDialog({build, onClose, source, config}: {
+  build: CatalogBuild; onClose: () => void; source: string; config?: Record<string, string>
+}) {
   const [sent, setSent] = useState(false)
   const [pending, setPending] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  /* Смена сборки сбрасывает результат прошлой отправки */
-  const [shownBuildId, setShownBuildId] = useState(build?.id ?? null)
-  if (shownBuildId !== (build?.id ?? null)) {
-    setShownBuildId(build?.id ?? null)
-    setSent(false)
-    setError(null)
-  }
-
-  useEffect(() => {
-    if (!build) return
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose()
-    document.addEventListener('keydown', onKey)
-    document.body.style.overflow = 'hidden'
-    return () => {
-      document.removeEventListener('keydown', onKey)
-      document.body.style.overflow = ''
-    }
-  }, [build, onClose])
-
-  if (!build) return null
 
   const onSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -56,6 +44,10 @@ export function OrderModal({
     const name = String(data.get('name') || '').trim()
     const contact = String(data.get('contact') || '').trim()
     const comment = String(data.get('comment') || '').trim()
+    if (data.get('consent') !== 'on') {
+      setError('Подтвердите согласие на обработку персональных данных.')
+      return
+    }
 
     if (!name || !contact) {
       setError('Заполните имя и контакт — иначе мы не сможем ответить.')
@@ -74,6 +66,7 @@ export function OrderModal({
       model_title: `${build.name} · ${build.series} Series`,
       price_from: build.price,
       config,
+      consent: { accepted: true, version: LEAD_CONSENT_VERSION },
     })
 
     setPending(false)
@@ -82,17 +75,7 @@ export function OrderModal({
   }
 
   return (
-    <div
-      className="fixed inset-0 z-[80] flex items-center justify-center bg-ink/80 p-4 backdrop-blur-md"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={`Заказать ${build.name}`}
-    >
-      <div
-        className="w-full max-w-md overflow-hidden rounded-xl border border-line bg-coal shadow-card"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <Modal label={`Заказать ${build.name}`} onClose={onClose}>
         <div className="flex items-center justify-between border-b border-line px-6 py-5">
           <h3 className="font-display text-base font-bold uppercase tracking-wide text-bone">
             Заказать сборку
@@ -100,7 +83,7 @@ export function OrderModal({
           <button
             onClick={onClose}
             aria-label="Закрыть"
-            className="flex h-9 w-9 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
+            className="flex h-11 w-11 items-center justify-center rounded-md border border-line text-ash transition-colors duration-300 hover:border-ember/50 hover:text-flame"
           >
             <GlyphClose className="h-4 w-4" />
           </button>
@@ -136,12 +119,11 @@ export function OrderModal({
                 Заявка принята
               </div>
               <p className="mt-2 text-[12px] leading-relaxed text-ash">
-                Отвечает мастер, а не колл-центр. Напишем в Telegram в течение 30 минут
-                в рабочее время.
+                Мастер ответит по указанному контакту в рабочее время.
               </p>
               <button
                 onClick={onClose}
-                className="mt-5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110"
+                className="mt-5 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110"
               >
                 Готово
               </button>
@@ -207,27 +189,21 @@ export function OrderModal({
                 </p>
               )}
 
+              <LeadConsent />
               <button
                 type="submit"
                 disabled={pending}
                 data-analytics-goal="catalog_order_submit"
-                className="cta-pulse w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3.5 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
+                className="cta-pulse w-full rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-6 py-3.5 font-display text-[12px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember transition-all duration-300 hover:brightness-110 active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
               >
                 {pending ? 'Отправляем…' : 'Отправить заявку'}
               </button>
               <p className="text-center font-mono text-[9px] uppercase tracking-[0.16em] text-ash/70">
-                Ответим в Telegram в течение 30 минут
-              </p>
-              <p className="text-center text-[10px] leading-relaxed text-ash/60">
-                Нажимая кнопку, вы соглашаетесь с{' '}
-                <Link href="/privacy" className="text-flame/80 underline-offset-2 hover:underline">
-                  политикой конфиденциальности
-                </Link>
+                Мастер ответит в рабочее время
               </p>
             </form>
           )}
         </div>
-      </div>
-    </div>
+    </Modal>
   )
 }

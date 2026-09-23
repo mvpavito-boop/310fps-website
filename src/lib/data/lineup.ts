@@ -1,3 +1,4 @@
+import { BUILD_TIME } from '@/lib/build-terms';
 // LAB Series — флагманская линейка 310FPS Custom Lab.
 // Источник правды для /lineup/[id], BestsellersSection и префилла конфигуратора.
 // В будущем мигрировать в Supabase lineup table.
@@ -76,7 +77,7 @@ export const LINEUP: LineupModel[] = [
             "Тихая воздушная СО — 28 дБ в нагрузке",
             "Полный паспорт ПК с замерами температур",
             "Гарантия 1 год, расширение до 3 лет",
-            "Срок сборки — 3–7 дней",
+            `Срок сборки — ${BUILD_TIME}`,
         ],
         productPage: {
             overview: [
@@ -115,7 +116,7 @@ export const LINEUP: LineupModel[] = [
                 "Усилить охлаждение, если планируются долгие рабочие нагрузки",
             ],
         },
-        buildDays: "3–7 дней",
+        buildDays: BUILD_TIME,
     },
     {
         id: "vector",
@@ -151,7 +152,7 @@ export const LINEUP: LineupModel[] = [
             "Выверенные тайминги памяти CL30",
             "Профессиональный андервольт CPU/GPU",
             "Жидкостное охлаждение 360 мм",
-            "Срок сборки — 5–10 дней",
+            `Срок сборки — ${BUILD_TIME}`,
         ],
         productPage: {
             overview: [
@@ -190,7 +191,7 @@ export const LINEUP: LineupModel[] = [
                 "Перейти на более мощную видеокарту для 4K-сценария",
             ],
         },
-        buildDays: "5–10 дней",
+        buildDays: BUILD_TIME,
     },
     {
         id: "canvas",
@@ -226,7 +227,7 @@ export const LINEUP: LineupModel[] = [
             "Шумопоглощающий корпус — 24 дБ в нагрузке",
             "64GB RAM для монтажа и рендера",
             "PCIe Gen5 SSD — 12 GB/s чтение",
-            "Срок сборки — 7–14 дней",
+            `Срок сборки — ${BUILD_TIME}`,
         ],
         productPage: {
             overview: [
@@ -265,7 +266,7 @@ export const LINEUP: LineupModel[] = [
                 "Перейти на кастомный контур, если нужна максимально тихая эстетика",
             ],
         },
-        buildDays: "7–14 дней",
+        buildDays: BUILD_TIME,
     },
     {
         id: "spectre",
@@ -301,7 +302,7 @@ export const LINEUP: LineupModel[] = [
             "Кастомный водяной контур",
             "16 ядер / 32 потока 9950X3D",
             "Память 7200MHz с ручным тюнингом",
-            "Срок сборки — 10–21 день",
+            `Срок сборки — ${BUILD_TIME}`,
         ],
         productPage: {
             overview: [
@@ -340,7 +341,7 @@ export const LINEUP: LineupModel[] = [
                 "Перейти на RTX 5090, если нужен максимум для 4K/VR/AI",
             ],
         },
-        buildDays: "10–21 день",
+        buildDays: BUILD_TIME,
     },
     {
         id: "axiom",
@@ -376,7 +377,7 @@ export const LINEUP: LineupModel[] = [
             "RTX 5090 32GB — топ линейки 2026",
             "Память 8000MHz premium-kit",
             "1600W Titanium PSU с 12VHPWR",
-            "Срок сборки — 14–30 дней",
+            `Срок сборки — ${BUILD_TIME}`,
         ],
         productPage: {
             overview: [
@@ -415,7 +416,7 @@ export const LINEUP: LineupModel[] = [
                 "Согласовать профессиональные компоненты под AI/3D/workstation-задачи",
             ],
         },
-        buildDays: "14–30 дней",
+        buildDays: BUILD_TIME,
     },
 ];
 

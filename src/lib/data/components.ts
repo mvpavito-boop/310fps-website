@@ -8,7 +8,7 @@ export type ComponentCategory =
     | 'psu'
     | 'case';
 
-export type SocketType = 'LGA1700' | 'LGA1200' | 'AM5' | 'AM4';
+export type SocketType = 'LGA1700' | 'LGA1200' | 'LGA1851' | 'AM5' | 'AM4';
 
 export interface PCComponent {
     id: string;

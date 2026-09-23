@@ -55,6 +55,7 @@ next-env.d.ts
 .playwright-cli/
 .impeccable/
 .agent/
+/.local/
 .agents/
 .codex/
 /artifacts/
@@ -63,3 +64,9 @@ next-env.d.ts
 # session/communication artifacts
 communication_dump.txt
 compass_artifact_*.md
+
+# Supabase CLI local cache
+/supabase/.temp/
+
+# Local audits, price workbooks and release artifacts
+/outputs/

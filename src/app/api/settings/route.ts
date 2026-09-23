@@ -7,7 +7,8 @@ export async function GET() {
     try {
         const supabase = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
-            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+            process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+            { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(8000) }) } }
         );
 
         const { data, error } = await supabase
@@ -22,7 +23,7 @@ export async function GET() {
         }
 
         return NextResponse.json(settings);
-    } catch (error: unknown) {
-        return NextResponse.json({ error: error instanceof Error ? error.message : 'Unknown error' }, { status: 500 });
+    } catch {
+        return NextResponse.json({ error: 'Сервис временно недоступен. Повторите запрос позже.' }, { status: 503 });
     }
 }

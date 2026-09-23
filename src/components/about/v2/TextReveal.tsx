@@ -26,8 +26,8 @@ export function TextReveal({
         if (!el) return;
 
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            setVisible(true);
-            return;
+            const frame = requestAnimationFrame(() => setVisible(true));
+            return () => cancelAnimationFrame(frame);
         }
 
         const io = new IntersectionObserver(
@@ -90,8 +90,8 @@ export function RevealLine({
         if (!el) return;
 
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            setVisible(true);
-            return;
+            const frame = requestAnimationFrame(() => setVisible(true));
+            return () => cancelAnimationFrame(frame);
         }
 
         const io = new IntersectionObserver(

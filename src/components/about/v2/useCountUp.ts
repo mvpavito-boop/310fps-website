@@ -13,16 +13,16 @@ export function useCountUp(
 
     useEffect(() => {
         if (!startOnView) {
-            setStarted(true);
-            return;
+            const frame = requestAnimationFrame(() => setStarted(true));
+            return () => cancelAnimationFrame(frame);
         }
 
         const el = ref.current;
         if (!el) return;
 
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            setValue(end);
-            return;
+            const frame = requestAnimationFrame(() => setValue(end));
+            return () => cancelAnimationFrame(frame);
         }
 
         const io = new IntersectionObserver(
@@ -45,8 +45,8 @@ export function useCountUp(
         if (!started) return;
 
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            setValue(end);
-            return;
+            const frame = requestAnimationFrame(() => setValue(end));
+            return () => cancelAnimationFrame(frame);
         }
 
         let raf = 0;

@@ -60,8 +60,8 @@ function LinkGroup({
             </button>
             <div
                 className={cn(
-                    "grid transition-all duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] lg:grid-rows-[1fr]",
-                    open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+                    "grid transition-all duration-500 [transition-timing-function:cubic-bezier(0.16,1,0.3,1)] lg:visible lg:grid-rows-[1fr]",
+                    open ? "visible grid-rows-[1fr]" : "invisible grid-rows-[0fr]"
                 )}
             >
                 <div className="overflow-hidden">
@@ -205,7 +205,7 @@ export function Footer() {
                     <div>© 2026 310FPS Custom Lab</div>
                     <div className="flex items-center gap-2.5">
                         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.8)]" />
-                        Мастер на связи · СПб {spbTime}
+                        Время в Петербурге · {spbTime}
                     </div>
                     <Link href="/contacts" className="transition-colors hover:text-flame">
                         Контакты →

@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { SeriesPageContent } from "@/components/series/SeriesPageContent";
 import { getAllSeriesSlugs, getSeriesPageBySlug } from "@/lib/data/lab-series";
 import { absoluteUrl, createPageMetadata } from "@/lib/site-config";
+import { getPublicCommerce } from "@/lib/commerce/server";
 
 type PageProps = { params: Promise<{ slug: string }> };
 
@@ -11,7 +12,7 @@ export function generateStaticParams() {
 
 export async function generateMetadata({ params }: PageProps) {
     const { slug } = await params;
-    const page = getSeriesPageBySlug(slug);
+    const page = getSeriesPageBySlug(slug, await getPublicCommerce());
 
     if (!page) {
         return createPageMetadata({
@@ -33,7 +34,7 @@ export async function generateMetadata({ params }: PageProps) {
 
 export default async function SeriesPage({ params }: PageProps) {
     const { slug } = await params;
-    const page = getSeriesPageBySlug(slug);
+    const page = getSeriesPageBySlug(slug, await getPublicCommerce());
 
     if (!page) notFound();
 

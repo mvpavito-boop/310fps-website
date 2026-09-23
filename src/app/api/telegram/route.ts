@@ -1,3 +1,5 @@
+import { isAdminChat, isTelegramWebhookAuthorized } from '@/lib/telegram-auth';
+import { sanitizeTelegramText } from '@/lib/lead-message';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { absoluteUrl, siteConfig } from '@/lib/site-config';
@@ -33,11 +35,16 @@ const LEAD_CALLBACK_STATUSES: Record<string, string> = {
 };
 
 function getMessageWithStatus(text: string, statusText: string) {
-    const baseText = text.replace(/\n\n<b>Статус: .*<\/b>$/u, '');
+    const baseText = sanitizeTelegramText(text.replace(/\n\n(?:<b>)?Статус: .*(?:<\/b>)?$/u, ''));
     return `${baseText}\n\n<b>Статус: ${statusText}</b>`;
 }
 
 export async function POST(req: Request) {
+    const secret = process.env.TELEGRAM_WEBHOOK_SECRET;
+    if (!secret) return NextResponse.json({ ok: false }, { status: 503 });
+    if (!isTelegramWebhookAuthorized(req.headers.get('x-telegram-bot-api-secret-token'), secret)) {
+        return NextResponse.json({ ok: false }, { status: 403 });
+    }
     try {
         const update = await req.json();
         const supabase = getSupabase();
@@ -46,9 +53,13 @@ export async function POST(req: Request) {
         // 1. Обработка Callback Query (нажатие на кнопки)
         if (update.callback_query) {
             const { id, data, message } = update.callback_query;
-            const chatId = message.chat.id;
+            const chatId = message?.chat?.id;
+            if (typeof data !== 'string' || typeof chatId !== 'number' || typeof id !== 'string') {
+                return NextResponse.json({ ok: true });
+            }
 
             if (data.startsWith('lead_status:')) {
+                if (!isAdminChat(chatId, adminChatId)) return NextResponse.json({ ok: true });
                 const [, leadId, status] = data.split(':');
                 const statusText = LEAD_CALLBACK_STATUSES[status];
 
@@ -99,7 +110,7 @@ export async function POST(req: Request) {
             const chatId = chat.id;
 
             // Команды админа
-            if (chatId.toString() === adminChatId) {
+            if (isAdminChat(chatId, adminChatId)) {
                 if (text === '/stats') {
                     const { count: leadsCount } = await supabase.from('leads').select('*', { count: 'exact', head: true });
                     const { count: buildsCount } = await supabase.from('saved_builds').select('*', { count: 'exact', head: true });
@@ -112,7 +123,7 @@ export async function POST(req: Request) {
                 await sendMainMenu(chatId, from.first_name);
             } else if (text && !text.startsWith('/')) {
                 // Пересылка сообщения админу (Поддержка)
-                const forwardMsg = `📩 <b>Новое сообщение от клиента!</b>\n\n👤 ${from.first_name} (@${from.username || 'n/a'})\n🆔 <code>${from.id}</code>\n\n💬 <b>Текст:</b>\n${text}`;
+                const forwardMsg = `📩 <b>Новое сообщение от клиента!</b>\n\n👤 ${sanitizeTelegramText(from.first_name)} (@${sanitizeTelegramText(from.username || 'n/a')})\n🆔 <code>${from.id}</code>\n\n💬 <b>Текст:</b>\n${sanitizeTelegramText(text)}`;
                 await sendTelegramMessage(adminChatId, forwardMsg);
                 await sendTelegramMessage(chatId, "✅ Получено! Запрос передан Специалисту Поддержки. Вам ответят в ближайшее время.");
             }
@@ -120,15 +131,15 @@ export async function POST(req: Request) {
 
         return NextResponse.json({ ok: true });
     } catch (error) {
-        console.error('Telegram Webhook error:', error);
-        return NextResponse.json({ ok: true });
+        console.error('Telegram webhook processing failed.');
+        return NextResponse.json({ ok: false }, { status: error instanceof SyntaxError ? 400 : 500 });
     }
 }
 
 // --- Помощники ---
 
 async function sendMainMenu(chatId: number, name: string) {
-    const text = `👋 Привет, <b>${name}</b>!\n\nДобро пожаловать в <b>310FPS Lab</b>. Я помогу тебе выбрать мощный компьютер или связаться с нами.`;
+    const text = `👋 Привет, <b>${sanitizeTelegramText(name)}</b>!\n\nДобро пожаловать в <b>310FPS Lab</b>. Я помогу тебе выбрать мощный компьютер или связаться с нами.`;
     const keyboard = {
         inline_keyboard: [
             [{ text: '📦 Каталог готовых ПК', callback_data: 'menu_catalog' }],
@@ -164,7 +175,7 @@ async function sendProductsByCategory(chatId: number, series: string) {
     }
 
     for (const item of products) {
-        const msg = `💻 <b>${item.name}</b>\n\n${item.description}\n\n💰 Цена: <b>${item.price.toLocaleString('ru-RU')} ₽</b>`;
+        const msg = `💻 <b>${sanitizeTelegramText(item.name)}</b>\n\n${sanitizeTelegramText(item.description)}\n\n💰 Цена: <b>${item.price.toLocaleString('ru-RU')} ₽</b>`;
         const keyboard = {
             inline_keyboard: [[{ text: '🔍 Подробнее на сайте', url: absoluteUrl(`/catalog/${item.id}`) }]]
         };
@@ -180,11 +191,15 @@ async function sendAdminStats(chatId: number, leads: number, builds: number) {
 
 // Базовые функции запросов
 async function sendTelegramRequest(method: string, body: Record<string, unknown>) {
-    return fetch(`https://api.telegram.org/bot${getBotToken()}/${method}`, {
+    const response = await fetch(`https://api.telegram.org/bot${getBotToken()}/${method}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(withAdminDirectMessagesTopic(method, body)),
+        signal: AbortSignal.timeout(10_000),
     });
+    const result = await response.json();
+    if (!response.ok || result.ok !== true) throw new Error('Telegram request failed');
+    return result;
 }
 
 async function sendTelegramMessage(chat_id: number | string, text: string) {

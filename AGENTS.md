@@ -1,143 +1,21 @@
-# AGENTS.md — 310FPS Project Instructions
+# 310FPS
 
-## Project status
+## Scope and development
+- This checkout is the Next.js 310FPS site. Other Kimi prototypes and SSD copies are separate projects.
+- For visual tasks, preserve backend, API contracts, database, auth, checkout, integrations and environment/deployment settings unless the user requests those changes.
+- Preserve unrelated changes in the dirty worktree.
+- Reuse the running preview at http://localhost:3004. When needed: `npm run dev -- --webpack --port 3004`; avoid Turbopack here.
+- Checks: `npm run typecheck`, scoped ESLint for changed files, and `npm run build` for substantial changes. Report existing failures separately.
 
-The backend and business logic already exist.
-
-Primary current goal:
-Improve the visual design and frontend presentation without breaking backend logic, API routes, database schema, authentication, forms, checkout, admin tools, or existing integrations.
-
-## Important design documents
-
-Before any frontend/design task, read:
-
-- `docs/310fps/design-system.md`
-- `docs/310fps/ui-director.md`
-- `docs/310fps/ui-review-checklist.md`
-- `docs/310fps/codex-prompts.md`
-
-## Absolute restrictions
-
-Do NOT modify backend logic unless explicitly requested.
-
-Do NOT modify:
-
-- API contracts
-- database schema
-- authentication logic
-- payment/checkout logic
-- admin/backend services
-- server actions
-- environment variables
-- deployment configuration
-
-For UI tasks, focus only on:
-
-- frontend components
-- page layout
-- styling
-- typography
-- spacing
-- animations
-- visual hierarchy
-- responsive behavior
-
-## Design goal
-
-The site must look like a premium custom PC studio brand, not a generic Tailwind template.
-
-The visual style must feel:
-
-- premium
-- cinematic
-- dark tech
-- clean
-- engineered
-- expensive
-- high-trust
-- custom-designed
-
-## Non-negotiable UI rules
-
-- No default Tailwind look
-- No generic SaaS template feel
-- No random colors
-- No inconsistent spacing
-- No cluttered gaming chaos
-- Use strong visual hierarchy
-- Use strict spacing system
-- Use premium dark graphite + orange/red accent language
-- Every section must have a clear focal point
-- Every page must look intentionally designed
-
-## Workflow
-
-For every major UI redesign task:
-
-1. Analyze existing frontend structure first.
-2. Identify components/pages that need visual redesign.
-3. Propose a safe implementation plan.
-4. Change frontend in small steps.
-5. Preserve existing backend behavior.
-6. Run lint/build/type checks if available.
-7. Review the diff before final response.
-8. Rate the final UI against the checklist.
-
-Project workflow notes:
-
-- For software tasks, apply the local `$karpathy-guidelines` skill when available so changes stay explicit, simple, scoped, and verified.
-- Keep changes focused on the requested outcome and avoid unrelated refactors in the current dirty worktree.
-- For local development, prefer `npm run dev -- --webpack --port 3004`.
-- Avoid Turbopack in dev unless the user explicitly asks to revisit it; previous dev-mode runs had dependency resolution issues from the parent `/Projects` folder.
-
-## Full Page Visual Redesign Mode
-
-When the user asks to redesign a page, Codex must redesign the full visible page, not only the hero or navbar, unless the user explicitly limits the scope.
-
-A page redesign includes all visible frontend modules on that route:
-
-- header / navbar
-- hero
-- filters / controls
-- product cards
-- catalog cards
-- series cards
-- news cards
-- CTA blocks
-- forms
-- tabs
-- empty states
-- pagination
-- footer
-- responsive states
-
-## Visible Change Rule
-
-A redesign task is incomplete if any major visible module remains visually identical to the previous version.
-
-For every redesigned page, Codex must provide a module-by-module report:
-
-| Module | Changed? | What changed |
-|---|---|---|
-
-If a module was not changed, Codex must explain why.
-
-## Backend Safety
-
-For visual redesign tasks, backend logic, API routes, database schema, authentication, checkout, admin logic and data contracts must remain unchanged.
-
-Frontend components that consume existing data may be restyled, reorganized visually, or wrapped in new layout components, but their data flow and props must be preserved unless explicitly requested.
-
-## Done means
-
-A UI task is complete only when:
-
-- The page visually follows the 310FPS design system.
-- Backend behavior is not changed.
-- Responsive behavior is checked.
-- No obvious layout overflow exists.
-- The design does not look generic.
-- The final answer includes changed files and what was verified.
+## Design
+- Do not use the Karpathy skill in this project (explicit user preference).
+- The accepted homepage and `src/app/globals.css` are the visual authority: graphite, warm amber, Unbounded headings, Manrope body, restrained JetBrains Mono labels.
+- About work is at `/about/v6`, in `src/components/about/v6/`. Keep previous variants available unless asked otherwise.
+- No periods in headings. Prefer clear, human language and breathing room over card grids, table-like sections and decorative technical labels.
+- History should communicate growth. Customer loyalty should clearly show recommendations, upgrades and PCs for relatives. Use verified company facts and actual reviews.
+- Motion must support the story, work on mobile, respect reduced motion and pause offscreen. Match existing brand motion where requested.
+- Review changed sections in the running browser at mobile and desktop widths. Check overflow, touch/keyboard controls, typography, motion and links.
+- Historical docs in `docs/310fps/` are references, not blanket instructions. Current user feedback and the actual approved visual system take priority.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

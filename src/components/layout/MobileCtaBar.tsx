@@ -14,17 +14,26 @@ interface PageCtaConfig {
     secondaryLabel: string;
     secondaryHref: string | null;
     telegramGoal: AnalyticsGoal;
+    showTelegram: boolean;
 }
 
 function getPageConfig(pathname: string): PageCtaConfig {
-    if (pathname === "/about" || pathname === "/about/v2" || pathname === "/about/v3") {
+    if (
+        pathname === "/about" ||
+        pathname === "/about/v2" ||
+        pathname === "/about/v3" ||
+        pathname === "/about/v4" ||
+        pathname === "/about/v5" ||
+        pathname === "/about/v6"
+    ) {
         return {
-            primaryLabel: "Написать в Telegram",
+            primaryLabel: "Обсудить ПК",
             primaryHref: siteConfig.telegramDirectUrl,
             primaryGoal: ANALYTICS_GOALS.aboutMobileCtaPrimary,
             secondaryLabel: "Каталог",
             secondaryHref: "/catalog",
             telegramGoal: ANALYTICS_GOALS.aboutMobileCtaTelegram,
+            showTelegram: false,
         };
     }
 
@@ -35,6 +44,7 @@ function getPageConfig(pathname: string): PageCtaConfig {
         secondaryLabel: "Каталог",
         secondaryHref: "/catalog",
         telegramGoal: ANALYTICS_GOALS.mobileCtaTelegram,
+        showTelegram: true,
     };
 }
 
@@ -42,6 +52,7 @@ interface MobileCtaBarProps {
     primaryLabel?: string;
     primaryHref?: string;
     onPrimaryClick?: () => void;
+    primaryDisabled?: boolean;
     secondaryLabel?: string;
     secondaryHref?: string | null;
 }
@@ -67,31 +78,37 @@ export function MobileCtaBar(props: MobileCtaBarProps = {}) {
     };
 
     useEffect(() => {
-        let footerSeen = false;
-        const update = () => setVisible(!footerSeen);
+        const visibleStops = new Set<Element>();
+        const update = () => setVisible(visibleStops.size === 0);
 
-        const footer = document.querySelector("footer");
+        /* Страница может объявить собственную финальную CTA точкой остановки,
+           чтобы липкая панель не дублировала кнопки в одном экране. */
+        const stopTargets = document.querySelectorAll("[data-mobile-cta-stop], body > footer");
         const io = new IntersectionObserver(
             (entries) => {
-                footerSeen = entries[0]?.isIntersecting ?? false;
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) visibleStops.add(entry.target);
+                    else visibleStops.delete(entry.target);
+                });
                 update();
             },
             { threshold: 0.05 }
         );
-        if (footer) io.observe(footer);
+        stopTargets.forEach(target => io.observe(target));
 
         const timer = setTimeout(update, 350);
         return () => {
             clearTimeout(timer);
             io.disconnect();
         };
-    }, []);
+    }, [pathname]);
 
     /* На /configurator своя панель с итоговой ценой — не дублируем, если не переданы пропсы. */
-    if (pathname === "/configurator" && !props.onPrimaryClick) return null;
+    if (pathname.startsWith("/admin") || (pathname === "/configurator" && !props.onPrimaryClick)) return null;
 
-    const primaryCls =
-        "relative flex-1 overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-white shadow-ember active:scale-[0.98]";
+    const primaryCls = pageConfig.showTelegram
+        ? "relative flex-1 overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-ink shadow-ember active:scale-[0.98]"
+        : "flex min-h-11 flex-1 items-center justify-center whitespace-nowrap rounded-md bg-ember px-3 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.04em] text-ink active:scale-[0.98]";
 
     return (
         <div
@@ -101,10 +118,11 @@ export function MobileCtaBar(props: MobileCtaBarProps = {}) {
             }
             style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
             aria-hidden={!visible}
+            inert={!visible}
         >
             <div className="flex items-stretch gap-2.5 px-3.5 py-2.5">
                 {props.onPrimaryClick ? (
-                    <button type="button" onClick={props.onPrimaryClick} className={primaryCls} data-analytics-goal={config.primaryGoal}>
+                    <button type="button" onClick={props.onPrimaryClick} disabled={props.primaryDisabled} className={`${primaryCls} disabled:cursor-not-allowed disabled:opacity-40`} data-analytics-goal={config.primaryGoal}>
                         {config.primaryLabel}
                     </button>
                 ) : config.primaryHref.startsWith("http") ? (
@@ -126,22 +144,22 @@ export function MobileCtaBar(props: MobileCtaBarProps = {}) {
                 {config.secondaryHref && (
                     <Link
                         href={config.secondaryHref}
-                        className="corners rounded-md bg-white/[0.04] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-bone active:scale-[0.98]"
+                        className="corners flex items-center justify-center rounded-md bg-white/[0.04] px-4 py-2.5 text-center font-display text-[11px] font-semibold uppercase tracking-[0.1em] text-bone active:scale-[0.98]"
                     >
                         {config.secondaryLabel}
                     </Link>
                 )}
 
-                <a
+                {pageConfig.showTelegram && <a
                     href={siteConfig.telegramUrl}
                     target="_blank"
                     rel="noopener noreferrer"
-                    aria-label="Написать в Telegram"
+                    aria-label="Канал 310FPS в Telegram"
                     data-analytics-goal={config.telegramGoal}
                     className="flex h-[40px] w-12 items-center justify-center rounded-md border border-ember/40 bg-ember/10 text-ember active:scale-[0.94]"
                 >
                     <Icon name="send" className="h-[18px] w-[18px]" />
-                </a>
+                </a>}
             </div>
         </div>
     );

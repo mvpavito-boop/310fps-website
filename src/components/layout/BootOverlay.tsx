@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 
 /**
  * Брендовая заставка на первый вход в сессию: лого, вордмарк и янтарный shimmer.
@@ -45,8 +45,6 @@ function writeBootedFlag() {
 export function BootOverlay() {
     const [visible, setVisible] = useState(false);
     const [fading, setFading] = useState(false);
-    const timers = useRef({ min: 0, max: 0, remove: 0 });
-    const finishedRef = useRef(false);
 
     useEffect(() => {
         const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -54,8 +52,6 @@ export function BootOverlay() {
 
         /* Без заставки кинетика заголовка всё равно должна стартовать */
         if (reducedMotion || alreadyBooted) {
-            setVisible(false);
-            setFading(false);
             window.dispatchEvent(new Event(APP_READY_EVENT));
             return;
         }
@@ -64,44 +60,45 @@ export function BootOverlay() {
            Это защищает от React Strict Mode: при двойном монтировании в dev
            второй проход ещё не видит флага, поэтому лоадер не пропадает
            раньше времени. */
-        finishedRef.current = false;
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setVisible(true);
+        let finished = false;
+        const timers = { min: 0, max: 0, remove: 0 };
+        const frame = requestAnimationFrame(() => setVisible(true));
 
         const shownAt = performance.now();
         let loadFired = false;
 
         const finish = () => {
-            if (finishedRef.current) return;
-            finishedRef.current = true;
+            if (finished) return;
+            finished = true;
             writeBootedFlag();
-            timers.current.remove = window.setTimeout(() => setVisible(false), FADE_MS);
+            timers.remove = window.setTimeout(() => setVisible(false), FADE_MS);
             setFading(true);
             window.dispatchEvent(new Event(APP_READY_EVENT));
         };
 
         const scheduleFinish = () => {
-            if (loadFired || finishedRef.current) return;
+            if (loadFired || finished) return;
             loadFired = true;
             const elapsed = performance.now() - shownAt;
             const wait = Math.max(0, MIN_VISIBLE_MS - elapsed);
-            timers.current.min = window.setTimeout(finish, wait);
+            timers.min = window.setTimeout(finish, wait);
         };
 
         if (document.readyState === "complete") scheduleFinish();
         else window.addEventListener("load", scheduleFinish, { once: true });
 
-        timers.current.max = window.setTimeout(() => {
+        timers.max = window.setTimeout(() => {
             if (!loadFired) window.removeEventListener("load", scheduleFinish);
             scheduleFinish();
         }, MAX_VISIBLE_MS);
 
         return () => {
             window.removeEventListener("load", scheduleFinish);
-            clearTimeout(timers.current.min);
-            clearTimeout(timers.current.max);
-            clearTimeout(timers.current.remove);
-            if (finishedRef.current) writeBootedFlag();
+            cancelAnimationFrame(frame);
+            clearTimeout(timers.min);
+            clearTimeout(timers.max);
+            clearTimeout(timers.remove);
+            if (finished) writeBootedFlag();
         };
     }, []);
 

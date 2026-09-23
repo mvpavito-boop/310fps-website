@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { legalOperator, legalOperatorComplete } from "@/lib/legal-operator";
 import { Reveal, SectionLabel } from "@/components/ui/primitives";
 import { createPageMetadata, siteConfig } from "@/lib/site-config";
 
@@ -9,27 +10,14 @@ export const metadata = createPageMetadata({
     noIndex: true,
 });
 
-/**
- * ВНИМАНИЕ: реквизиты оператора персональных данных.
- *
- * По 152-ФЗ политика должна называть оператора и способ связи с ним.
- * Пока владелец не передал данные ИП, здесь стоят заглушки — их нужно
- * заменить до публикации. Всё остальное в документе готово.
- */
-const OPERATOR = {
-    name: "ИП <ФИО владельца>",
-    inn: "<ИНН>",
-    ogrnip: "<ОГРНИП>",
-    address: "<юридический адрес>",
-    email: "<адрес для обращений>",
-    updatedAt: "5 августа 2026 года",
-};
+const operator = legalOperator();
+const OPERATOR = { ...operator, ogrnip: operator.registration, updatedAt: "23 сентября 2026 года" };
 
 const SECTIONS: Array<{ title: string; paragraphs?: string[]; bullets?: string[] }> = [
     {
         title: "Кто обрабатывает данные",
         paragraphs: [
-            `Оператором персональных данных является ${OPERATOR.name} (ИНН ${OPERATOR.inn}, ОГРНИП ${OPERATOR.ogrnip}, ${OPERATOR.address}), работающий под коммерческим обозначением «310FPS Custom Lab».`,
+            `Оператором персональных данных является ${OPERATOR.name || "оператор, чьи реквизиты уточняются"} (ИНН ${OPERATOR.inn}, ОГРНИП ${OPERATOR.ogrnip}, ${OPERATOR.address}), работающий под коммерческим обозначением «310FPS Custom Lab».`,
             `Связаться по вопросам обработки данных можно в Telegram ${siteConfig.telegramUrl}, по телефону ${siteConfig.phone} или письмом на ${OPERATOR.email}.`,
         ],
     },
@@ -48,8 +36,8 @@ const SECTIONS: Array<{ title: string; paragraphs?: string[]; bullets?: string[]
     {
         title: "Что собирается автоматически",
         paragraphs: [
-            "Сайт использует Яндекс.Метрику для статистики посещений. Она собирает обезличенные технические данные: тип устройства, браузер, источник перехода и поведение на страницах. Эти данные не позволяют идентифицировать вас лично и обрабатываются на условиях Яндекса.",
-            "Отключить сбор можно в настройках браузера, запретив файлы cookie, либо через блокировщики. На работу сайта это не влияет.",
+            process.env.NEXT_PUBLIC_YANDEX_METRIKA_ID ? "Для статистики посещений подключена Яндекс.Метрика: просмотры страниц, источник перехода и события взаимодействия. Вебвизор отключён. Имя, контакт и текст заявки не передаются нами в параметры целей." : "Яндекс.Метрика пока не подключена.",
+            "Источник первого перехода в текущей вкладке сохраняется в sessionStorage: рекламные метки UTM, yclid, путь страницы и домен источника. При отправке формы эти сведения добавляются к заявке, чтобы понимать, откуда пришло обращение.",
         ],
     },
     {
@@ -91,7 +79,7 @@ const SECTIONS: Array<{ title: string; paragraphs?: string[]; bullets?: string[]
     {
         title: "Согласие",
         paragraphs: [
-            "Отправляя форму на сайте, вы подтверждаете, что ознакомились с этой политикой и согласны на обработку указанных данных на описанных условиях.",
+            "Согласие на обработку для ответа на заявку оформляется отдельным полем в форме. Сохраняются версия текста и время его принятия.",
             "Мы можем обновлять политику — актуальная версия всегда доступна на этой странице.",
         ],
     },
@@ -105,7 +93,7 @@ export default function PrivacyPage() {
                     <SectionLabel index="Документ" text="Персональные данные" />
                 </Reveal>
                 <Reveal delay={80}>
-                    <h1 className="mt-6 font-display text-[clamp(1.8rem,4.6vw,3rem)] font-bold uppercase leading-[1.06] tracking-tight text-bone">
+                    <h1 className="mt-6 hyphens-auto break-words font-display text-[clamp(1.5rem,4.6vw,3rem)] font-bold uppercase leading-[1.12] tracking-tight text-bone">
                         Политика <span className="text-gradient">конфиденциальности</span>
                     </h1>
                 </Reveal>
@@ -116,6 +104,7 @@ export default function PrivacyPage() {
                 </Reveal>
 
                 <div className="mt-12 space-y-10">
+                    {!legalOperatorComplete() && <p role="status" className="rounded-lg border border-ember p-4 text-sm text-ash">Проект документа. Реквизиты и схема обработки данных должны быть подтверждены до открытия приёма заявок.</p>}
                     {SECTIONS.map((section, index) => (
                         <Reveal key={section.title} delay={60}>
                             <section>

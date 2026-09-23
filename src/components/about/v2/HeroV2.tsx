@@ -28,8 +28,8 @@ export function HeroV2() {
 
     useEffect(() => {
         if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-            setReady(true);
-            return;
+            const frame = requestAnimationFrame(() => setReady(true));
+            return () => cancelAnimationFrame(frame);
         }
         const t = setTimeout(() => setReady(true), 300);
         return () => clearTimeout(t);

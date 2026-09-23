@@ -1,10 +1,10 @@
-import { AboutPageContent } from "@/components/about/AboutPageContent";
+import { AboutV6Page } from "@/components/about/v6/AboutV6Page";
 import { absoluteUrl, createPageMetadata, siteConfig } from "@/lib/site-config";
 
 export const metadata = createPageMetadata({
-    title: "О лаборатории | 310FPS Custom Lab",
+    title: "Люди за каждым ПК — 310FPS Custom Lab",
     description:
-        "310FPS Custom Lab — сборка игровых ПК в Санкт-Петербурге с 2017 года. Более 2000 собранных систем, стресс-тест 24 часа и паспорт сборки на каждый компьютер.",
+        "История 310FPS, основатель Павел Иванов, работа лаборатории и отзывы клиентов. Собираем игровые ПК в Санкт-Петербурге с 2017 года.",
     path: "/about",
 });
 
@@ -28,7 +28,7 @@ export default function AboutPage() {
     return (
         <>
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(aboutJsonLd) }} />
-            <AboutPageContent />
+            <AboutV6Page />
         </>
     );
 }

@@ -87,15 +87,17 @@ export function SectionLabel({
 /* ---------- Заголовок секции ---------- */
 export function SectionTitle({
     children,
+    as: Heading = "h2",
     className,
     align = "center",
 }: {
     children: ReactNode;
+    as?: "h1" | "h2";
     className?: string;
     align?: "left" | "center";
 }) {
     return (
-        <h2
+        <Heading
             className={cn(
                 "font-display text-[clamp(1.6rem,4.2vw,3rem)] font-bold uppercase leading-[1.08] tracking-tight text-bone",
                 align === "center" && "text-center",
@@ -103,7 +105,7 @@ export function SectionTitle({
             )}
         >
             {children}
-        </h2>
+        </Heading>
     );
 }
 
@@ -143,7 +145,7 @@ export function EmberButton({
 }) {
     const cls = cn(
         "group relative inline-flex items-center justify-center gap-2.5 overflow-hidden rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-7 py-4",
-        "font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-white shadow-ember",
+        "font-display text-[13px] font-semibold uppercase tracking-[0.14em] text-ink shadow-ember",
         "transition-all duration-300 hover:shadow-[0_0_56px_-6px_rgba(206,144,72,0.65)] hover:brightness-110 active:scale-[0.98]",
         disabled && "pointer-events-none opacity-50",
         className

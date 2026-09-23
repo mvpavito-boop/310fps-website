@@ -9,8 +9,7 @@ export const metadata = createPageMetadata({
     path: "/faq",
 });
 
-/* FAQPage — единственная разметка, которая до сих пор даёт расширенный
-   сниппет в выдаче, поэтому вопросы дублируются в JSON-LD. */
+/* Структурированные данные повторяют видимые вопросы и ответы. */
 const faqJsonLd = {
     "@context": "https://schema.org",
     "@type": "FAQPage",
@@ -25,7 +24,7 @@ export default function FaqPage() {
     return (
         <div className="relative min-h-screen pt-[72px]">
             <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }} />
-            <Faq />
+            <Faq asPage />
         </div>
     );
 }
