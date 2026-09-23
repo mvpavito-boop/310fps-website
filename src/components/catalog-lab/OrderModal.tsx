@@ -8,6 +8,7 @@ import { useState, type FormEvent } from 'react'
 import { GlyphClose, Icon } from '@/components/ui/lab-icons'
 import { formatPrice, type CatalogBuild } from '@/lib/data/lab-catalog'
 import { submitLead } from '@/lib/submit-lead'
+import { BuildPhotoNote } from './BuildPhotoNote'
 
 /* Заявка на конкретную сборку: уходит в тот же обработчик лидов,
    что и форма на главной, но с привязкой к модели и её цене. */
@@ -94,10 +95,10 @@ function OrderDialog({build, onClose, source, config}: {
           <div className="flex items-center gap-4 rounded-lg border border-line bg-ink/50 p-4">
             <Image
               src={build.image}
-              alt={build.name}
+              alt={build.gallery?.[0]?.alt || build.name}
               width={80}
               height={56}
-              className="h-14 w-20 rounded-md object-cover brightness-90"
+              className="h-14 w-20 rounded-md object-contain"
             />
             <div>
               <div className="font-mono text-[8px] font-semibold uppercase tracking-[0.24em] text-ember">
@@ -111,6 +112,8 @@ function OrderDialog({build, onClose, source, config}: {
               </div>
             </div>
           </div>
+
+          <BuildPhotoNote build={build} compact className="mt-2" />
 
           {sent ? (
             <div className="mt-6 rounded-lg border border-ember/40 bg-ember/10 p-5 text-center">

@@ -20,6 +20,7 @@ import {
 } from '@/lib/data/lab-catalog'
 import { cn } from '@/lib/utils'
 import { useCommerce } from './CommerceProvider'
+import { BuildPhotoNote } from './BuildPhotoNote'
 
 const GAMES: { key: keyof CatalogBuild['fps']; label: string }[] = [
   { key: 'cs2', label: 'CS2' },
@@ -284,7 +285,6 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                       sizes="(max-width: 1024px) 100vw, 55vw"
                       className="aspect-[4/3] w-full object-contain"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-ink/50 via-transparent to-ink/10" aria-hidden />
                     <span className="absolute left-4 top-4 font-mono text-[10px] uppercase tracking-[0.3em] text-white/50">
                       /{String(index + 1).padStart(2, '0')}
                     </span>
@@ -301,12 +301,14 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                       </span>
                     )}
                   </div>
+                  <BuildPhotoNote build={build} className="mt-3" />
                   <div className="mt-3 grid grid-cols-4 gap-3">
                     {gallery.map((g, i) => (
                       <button
                         key={g.src}
                         onClick={() => setShot(i)}
                         aria-label={g.alt}
+                        aria-pressed={i === shot}
                         className={cn(
                           'overflow-hidden rounded-lg border transition-all duration-300',
                           i === shot
@@ -542,17 +544,18 @@ export function BuildPageContent({ buildId }: { buildId: string }) {
                     href={`/catalog/${r.id}`}
                     className="group relative overflow-hidden rounded-xl border border-line bg-coal transition-all duration-300 hover:-translate-y-1 hover:border-ember/40 hover:shadow-card"
                   >
-                    <div className="relative aspect-[16/9] overflow-hidden">
+                    <div className="relative aspect-[16/10] overflow-hidden">
                       <Image
                         src={r.image}
-                        alt={`Сборка ${r.name}`}
+                        alt={r.gallery?.[0]?.alt || `Сборка ${r.name}`}
                         fill
                         sizes="(max-width: 768px) 100vw, 33vw"
-                        className="object-cover brightness-[0.75] transition-all duration-700 group-hover:scale-[1.04] group-hover:brightness-100"
+                        className="object-contain transition-transform duration-700 motion-safe:group-hover:scale-[1.02]"
                       />
                       <div className="absolute inset-0 bg-gradient-to-t from-coal via-transparent to-transparent" aria-hidden />
                     </div>
                     <div className="p-5">
+                      <BuildPhotoNote build={r} compact className="mb-3" />
                       <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.26em] text-ember">
                         {r.series} Series
                       </div>

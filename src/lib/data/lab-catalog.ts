@@ -1,3 +1,5 @@
+import photoExamples from './catalog-photo-examples.json'
+
 /* Каталог готовых сборок — конкретные конфигурации внутри линеек Lab Series.
    Цены привязаны к канону: SIGNAL от 130к · VECTOR от 200к (хит) · CANVAS от 280к ·
    SPECTRE от 320к · AXIOM от 500к. Платформа — AMD X3D; Intel — только PROTOCOL под заказ. */
@@ -44,7 +46,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5070 12GB',
     ram: '32GB DDR5-6000',
     ssd: '1TB NVMe Gen4',
-    image: '/images/build-signal.png',
+    ...photoExamples.SIGNAL,
   },
   {
     id: 'signal-2',
@@ -58,7 +60,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5070 12GB',
     ram: '32GB DDR5-6000',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-signal.png',
+    ...photoExamples.SIGNAL,
   },
   {
     id: 'vector-1',
@@ -74,7 +76,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5070 Ti 16GB',
     ram: '32GB DDR5-6400',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-vector.png',
+    ...photoExamples.VECTOR,
   },
   {
     id: 'vector-2',
@@ -88,7 +90,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5070 Ti 16GB',
     ram: '64GB DDR5-6400',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-vector.png',
+    ...photoExamples.VECTOR,
   },
   {
     id: 'vector-3',
@@ -102,7 +104,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '64GB DDR5-6400',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-vector.png',
+    ...photoExamples.VECTOR,
   },
   {
     id: 'canvas-1',
@@ -117,7 +119,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '64GB DDR5-6400',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-canvas.png',
+    ...photoExamples.CANVAS,
   },
   {
     id: 'canvas-2',
@@ -131,7 +133,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '96GB DDR5-6400',
     ssd: '4TB NVMe Gen4',
-    image: '/images/build-canvas.png',
+    ...photoExamples.CANVAS,
   },
   {
     id: 'canvas-3',
@@ -145,7 +147,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '128GB DDR5-6000',
     ssd: '4TB NVMe Gen4',
-    image: '/images/build-canvas.png',
+    ...photoExamples.CANVAS,
   },
   {
     id: 'spectre-1',
@@ -160,7 +162,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '64GB DDR5-6400',
     ssd: '2TB NVMe Gen4',
-    image: '/images/build-spectre.png',
+    ...photoExamples.SPECTRE,
   },
   {
     id: 'spectre-2',
@@ -174,7 +176,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5080 16GB',
     ram: '64GB DDR5-6400',
     ssd: '4TB NVMe Gen4',
-    image: '/images/build-spectre.png',
+    ...photoExamples.SPECTRE,
   },
   {
     id: 'axiom-1',
@@ -189,7 +191,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5090 32GB',
     ram: '64GB DDR5-6400',
     ssd: '4TB NVMe Gen5',
-    image: '/images/build-axiom.png',
+    ...photoExamples.AXIOM,
   },
   {
     id: 'axiom-2',
@@ -203,7 +205,7 @@ export const CATALOG: CatalogBuild[] = [
     gpu: 'RTX 5090 32GB',
     ram: '128GB DDR5-6400',
     ssd: '8TB NVMe Gen5',
-    image: '/images/build-axiom.png',
+    ...photoExamples.AXIOM,
   },
 ]
 

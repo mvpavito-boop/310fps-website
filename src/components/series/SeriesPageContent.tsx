@@ -4,6 +4,7 @@ import { GlyphArrowUpRight, Icon, IconTile } from "@/components/ui/lab-icons";
 import { EmberButton, GhostButton, Reveal, SectionLabel, SectionTitle } from "@/components/ui/primitives";
 import { BUILD_INCLUDES, formatPrice, getAvgFps } from "@/lib/data/lab-catalog";
 import type { SeriesPage } from "@/lib/data/lab-series";
+import { BuildPhotoNote } from "@/components/catalog-lab/BuildPhotoNote";
 
 export function SeriesPageContent({ page }: { page: SeriesPage }) {
     const { lineup, builds, platform } = page;
@@ -32,12 +33,12 @@ export function SeriesPageContent({ page }: { page: SeriesPage }) {
                             <div className="corners relative overflow-hidden rounded-xl border border-line">
                                 <div className="relative aspect-[4/3]">
                                     <Image
-                                        src={hero.image}
-                                        alt={`Линейка ${lineup.title}`}
+                                        src={hero.gallery?.[0]?.src || hero.image}
+                                        alt={hero.gallery?.[0]?.alt || `Линейка ${lineup.title}`}
                                         fill
                                         priority
                                         sizes="(max-width: 1024px) 100vw, 55vw"
-                                        className="object-cover"
+                                        className="object-contain"
                                     />
                                     <div
                                         className="absolute inset-0 bg-gradient-to-t from-ink/60 via-transparent to-transparent"
@@ -45,6 +46,7 @@ export function SeriesPageContent({ page }: { page: SeriesPage }) {
                                     />
                                 </div>
                             </div>
+                            <BuildPhotoNote build={hero} className="mt-3" />
                         </Reveal>
 
                         <div>

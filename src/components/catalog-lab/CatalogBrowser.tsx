@@ -18,6 +18,7 @@ import { GlyphArrowUpRight, GlyphChevronDown, Icon } from '@/components/ui/lab-i
 import { Reveal } from '@/components/ui/primitives'
 import { cn } from '@/lib/utils'
 import { useCommerce } from './CommerceProvider'
+import { BuildPhotoNote } from './BuildPhotoNote'
 
 /* ---------- FPS-гейдж: конический циферблат в фирменном янтаре ---------- */
 function FpsGauge({ avg }: { avg: number }) {
@@ -69,10 +70,10 @@ function BuildCard({
       <div className="relative aspect-[16/10] overflow-hidden">
         <Image
           src={build.image}
-          alt={`Сборка ${build.name}`}
+          alt={build.gallery?.[0]?.alt || `Сборка ${build.name}`}
           fill
           sizes="(max-width: 640px) 100vw, (max-width: 1280px) 50vw, 33vw"
-          className="object-cover brightness-[0.8] transition-all duration-700 ease-out group-hover:scale-[1.04] group-hover:brightness-100"
+          className="object-contain transition-transform duration-700 ease-out motion-safe:group-hover:scale-[1.02]"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-coal via-transparent to-ink/30" aria-hidden />
         <span className="absolute left-3.5 top-3.5 font-mono text-[9px] uppercase tracking-[0.3em] text-white/50">
@@ -94,6 +95,7 @@ function BuildCard({
 
       {/* Тело */}
       <div className="flex flex-1 flex-col p-5">
+        <BuildPhotoNote build={build} compact className="mb-3" />
         <div className="font-mono text-[9px] font-semibold uppercase tracking-[0.3em] text-ember">
           {build.series} Series
         </div>

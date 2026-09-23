@@ -9,13 +9,22 @@ import { LINEUP } from "@/lib/data/lab-home";
 import { cn } from "@/lib/utils";
 import { useCommerce } from "@/components/catalog-lab/CommerceProvider";
 import { formatPrice } from "@/lib/data/lab-catalog";
+import { BuildPhotoNote } from "@/components/catalog-lab/BuildPhotoNote";
 
 export function LabSeries() {
     const { catalog, mode } = useCommerce();
     const lineup = LINEUP.map((line) => {
         const builds = catalog.filter((b) => b.series === line.name);
         const first = [...builds].sort((a,b)=>a.price-b.price)[0];
-        return { ...line, fps: 'Под вашу задачу', ...(mode === 'server' && first ? { cpu:first.cpu, gpu:first.gpu, ram:first.ram, image:first.image, fps: 'Под вашу задачу' } : {}), href: first ? line.href : '/#cta', price: first ? `от ${formatPrice(first.price)}` : 'Под заказ' };
+        return {
+            ...line,
+            fps: 'Под вашу задачу',
+            ...(mode === 'server' && first ? { cpu: first.cpu, gpu: first.gpu, ram: first.ram } : {}),
+            image: first?.image || line.image,
+            photoBuild: first,
+            href: first ? line.href : '/#cta',
+            price: first ? `от ${formatPrice(first.price)}` : 'Под заказ',
+        };
     });
     /* По умолчанию раскрыт CANVAS: середина линейки показывает и потолок, и вход */
     const [active, setActive] = useState(2);
@@ -64,12 +73,12 @@ export function LabSeries() {
                                 >
                                     <Image
                                         src={build.image}
-                                        alt={`Сборка ${build.name}`}
+                                        alt={build.photoBuild?.gallery?.[0]?.alt || `Сборка ${build.name}`}
                                         fill
                                         sizes="(max-width: 1024px) 100vw, 60vw"
                                         className={cn(
-                                            "object-cover transition-all duration-[1.1s] ease-out",
-                                            isActive ? "scale-100" : "scale-110 brightness-[0.55]"
+                                            "object-contain transition-all duration-[1.1s] ease-out",
+                                            isActive ? "object-top scale-100" : "scale-110 brightness-[0.55]"
                                         )}
                                     />
                                     <div
@@ -134,6 +143,7 @@ export function LabSeries() {
                                         </div>
 
                                         <div>
+                                            {build.photoBuild && <BuildPhotoNote build={build.photoBuild} compact className="mb-2" />}
                                             <div className="flex items-center gap-3">
                                                 <h3 className="font-display text-2xl font-extrabold uppercase tracking-wide text-bone sm:text-3xl">
                                                     {build.name}

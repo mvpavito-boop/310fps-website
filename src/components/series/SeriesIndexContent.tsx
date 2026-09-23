@@ -5,6 +5,7 @@ import { Reveal, SectionLabel } from "@/components/ui/primitives";
 import { formatPrice } from "@/lib/data/lab-catalog";
 import { getAllSeriesPages } from "@/lib/data/lab-series";
 import { getPublicCommerce } from "@/lib/commerce/server";
+import { BuildPhotoNote } from "@/components/catalog-lab/BuildPhotoNote";
 
 export async function SeriesIndexContent() {
     const series = getAllSeriesPages(await getPublicCommerce());
@@ -38,10 +39,10 @@ export async function SeriesIndexContent() {
                                 <div className="relative aspect-[16/10] overflow-hidden lg:aspect-auto lg:min-h-[260px]">
                                     <Image
                                         src={item.builds[0].image}
-                                        alt={`Линейка ${item.lineup.title}`}
+                                        alt={item.builds[0].gallery?.[0]?.alt || `Линейка ${item.lineup.title}`}
                                         fill
                                         sizes="(max-width: 1024px) 100vw, 45vw"
-                                        className="object-cover brightness-[0.75] transition-all duration-700 group-hover:scale-[1.03] group-hover:brightness-100"
+                                        className="object-contain transition-transform duration-700 motion-safe:group-hover:scale-[1.02]"
                                     />
                                     <div
                                         className="absolute inset-0 bg-gradient-to-r from-transparent to-coal/80 lg:to-coal"
@@ -53,6 +54,7 @@ export async function SeriesIndexContent() {
                                 </div>
 
                                 <div className="flex flex-col justify-center p-6 lg:p-9">
+                                    <BuildPhotoNote build={item.builds[0]} compact className="mb-3" />
                                     <div className="flex items-center gap-3">
                                         <h2 className="font-display text-2xl font-extrabold uppercase tracking-wide text-bone lg:text-3xl">
                                             {item.lineup.title}

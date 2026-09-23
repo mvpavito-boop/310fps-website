@@ -28,7 +28,7 @@ export async function generateMetadata({ params }: PageProps) {
         description: `${build.desc} Цена ${build.price.toLocaleString("ru-RU")} ₽ — чековая стоимость полной сборки. Стресс-тест 24 часа и паспорт сборки включены.`,
         path: `/catalog/${build.id}`,
         image: build.image,
-        imageAlt: `Сборка ${build.name}`,
+        imageAlt: build.gallery?.[0]?.alt || `Сборка ${build.name}`,
     });
 }
 
