@@ -6,6 +6,39 @@ import { validateLeadConsent, LEAD_CONSENT_VERSION } from '@/lib/lead-consent';
 import { submitLead } from '@/lib/submit-lead';
 import { CATALOG, getAvgFps } from '@/lib/data/lab-catalog';
 import { createInitialCommerce, validateCommerce } from '@/lib/commerce/model';
+import { telegramCatalogKeyboard, telegramCatalogMessages } from '@/lib/telegram-catalog';
+
+test('Telegram mirrors public catalogue series, prices and product links without stale legacy rows', () => {
+  const publicCatalog = [{ ...CATALOG[0], id: 'new-signal', name: 'Signal <test>', desc: 'A & B', price: 187654 }, CATALOG[5]];
+  assert.deepEqual(telegramCatalogKeyboard(publicCatalog).inline_keyboard.map(row => row[0].callback_data), ['cat:SIGNAL', 'cat:CANVAS']);
+  const messages = telegramCatalogMessages(publicCatalog, 'SIGNAL');
+  assert.equal(messages.length, 1);
+  assert.match(messages[0].text, /Signal &lt;test&gt;/);
+  assert.match(messages[0].text, /A &amp; B/);
+  assert.match(messages[0].text.replace(/\s/g, ''), /187654₽/);
+  assert.ok(messages[0].reply_markup.inline_keyboard[0][0].url.endsWith('/catalog/new-signal'));
+  assert.deepEqual(telegramCatalogMessages(publicCatalog, 'Performance'), []);
+  assert.deepEqual(telegramCatalogKeyboard([]).inline_keyboard, []);
+});
+
+test('authenticated Telegram webhook rejects malformed updates before database or notification access', async () => {
+  const { POST } = await import('@/app/api/telegram/route');
+  const previous = process.env.TELEGRAM_WEBHOOK_SECRET;
+  const previousFetch = globalThis.fetch;
+  let calls = 0;
+  try {
+    process.env.TELEGRAM_WEBHOOK_SECRET = 'test-webhook-secret';
+    globalThis.fetch = async () => { calls++; throw new Error('Network forbidden'); };
+    for (const body of ['null', '[]', 'false']) {
+      const response = await POST(new Request('https://test.invalid/api/telegram', { method: 'POST', headers: { 'x-telegram-bot-api-secret-token': 'test-webhook-secret' }, body }));
+      assert.equal(response.status, 400);
+    }
+    assert.equal(calls, 0);
+  } finally {
+    if (previous === undefined) delete process.env.TELEGRAM_WEBHOOK_SECRET; else process.env.TELEGRAM_WEBHOOK_SECRET = previous;
+    globalThis.fetch = previousFetch;
+  }
+});
 
 test('campaign fields are bounded; arbitrary URL fields and referrer queries never enter a lead', () => {
   assert.deepEqual(attributionFromUrl('https://site.test/catalog?utm_source=direct&yclid=42&phone=secret#private', 'https://search.test/?email=private'),

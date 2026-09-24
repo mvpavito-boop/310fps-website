@@ -14,3 +14,4 @@ require('../tests/manual-component.test.ts');
 require('../tests/admin-manual-component.test.tsx');
 require('../tests/admin-component-prices.test.tsx');
 require('../tests/release-readiness.test.ts');
+require('../tests/release-tools.test.cjs');

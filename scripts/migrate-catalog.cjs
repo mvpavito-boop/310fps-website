@@ -1,5 +1,6 @@
 /* Dry run by default. Explicit revision protects an existing remote catalog. */
-require('@next/env').loadEnvConfig(process.cwd());
+try { require('./release-env.cjs').loadReleaseEnv(); }
+catch (error) { console.error(error.message); process.exit(1); }
 require('ts-node').register({ transpileOnly: true, compilerOptions: { module: 'commonjs', moduleResolution: 'node' } });
 require('tsconfig-paths/register');
 const fs = require('node:fs');

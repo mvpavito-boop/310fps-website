@@ -3,11 +3,14 @@ import { sanitizeTelegramText } from '@/lib/lead-message';
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
 import { absoluteUrl, siteConfig } from '@/lib/site-config';
+import { getPublicCommerce } from '@/lib/commerce/server';
+import { telegramCatalogKeyboard, telegramCatalogMessages } from '@/lib/telegram-catalog';
 
 function getSupabase() {
     return createClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
-        process.env.SUPABASE_SERVICE_ROLE_KEY!
+        process.env.SUPABASE_SERVICE_ROLE_KEY!,
+        { auth: { persistSession: false }, global: { fetch: (input, init) => fetch(input, { ...init, signal: AbortSignal.timeout(10_000) }) } }
     );
 }
 
@@ -47,7 +50,9 @@ export async function POST(req: Request) {
     }
     try {
         const update = await req.json();
-        const supabase = getSupabase();
+        if (!update || typeof update !== 'object' || Array.isArray(update)) {
+            return NextResponse.json({ ok: false }, { status: 400 });
+        }
         const adminChatId = getAdminChatId();
 
         // 1. Обработка Callback Query (нажатие на кнопки)
@@ -68,7 +73,7 @@ export async function POST(req: Request) {
                     return NextResponse.json({ ok: true });
                 }
 
-                const { error } = await supabase
+                const { error } = await getSupabase()
                     .from('leads')
                     .update({ status })
                     .eq('id', leadId)
@@ -112,6 +117,7 @@ export async function POST(req: Request) {
             // Команды админа
             if (isAdminChat(chatId, adminChatId)) {
                 if (text === '/stats') {
+                    const supabase = getSupabase();
                     const { count: leadsCount } = await supabase.from('leads').select('*', { count: 'exact', head: true });
                     const { count: buildsCount } = await supabase.from('saved_builds').select('*', { count: 'exact', head: true });
                     return await sendAdminStats(chatId, leadsCount || 0, buildsCount || 0);
@@ -155,31 +161,24 @@ async function sendMainMenu(chatId: number, name: string) {
 }
 
 async function sendCatalogCategories(chatId: number) {
-    const text = "💎 <b>Выберите серию компьютеров:</b>";
-    const keyboard = {
-        inline_keyboard: [
-            [{ text: '⚡️ Performance Series', callback_data: 'cat:Performance' }],
-            [{ text: '🎨 Creator Series', callback_data: 'cat:Creator' }],
-            [{ text: '🔥 Extreme Series', callback_data: 'cat:Extreme' }]
-        ]
-    };
+    const { catalog } = await getPublicCommerce();
+    const keyboard = telegramCatalogKeyboard(catalog);
+    if (!keyboard.inline_keyboard.length) {
+        return sendTelegramMessage(chatId, 'Каталог обновляется. Поможем подобрать сборку под вашу задачу.');
+    }
+    const text = '💎 <b>Выберите линейку компьютеров:</b>';
     await sendTelegramRequest('sendMessage', { chat_id: chatId, text, parse_mode: 'HTML', reply_markup: keyboard });
 }
 
 async function sendProductsByCategory(chatId: number, series: string) {
-    const supabase = getSupabase();
-    const { data: products } = await supabase.from('catalog').select('*').eq('series', series).limit(5);
-
-    if (!products || products.length === 0) {
-        return await sendTelegramMessage(chatId, "Пока товаров в этой категории нет.");
+    const { catalog } = await getPublicCommerce();
+    const messages = telegramCatalogMessages(catalog, series);
+    if (!messages.length) {
+        await sendTelegramMessage(chatId, 'Эта линейка обновилась. Выберите сборку из текущего каталога.');
+        return sendCatalogCategories(chatId);
     }
-
-    for (const item of products) {
-        const msg = `💻 <b>${sanitizeTelegramText(item.name)}</b>\n\n${sanitizeTelegramText(item.description)}\n\n💰 Цена: <b>${item.price.toLocaleString('ru-RU')} ₽</b>`;
-        const keyboard = {
-            inline_keyboard: [[{ text: '🔍 Подробнее на сайте', url: absoluteUrl(`/catalog/${item.id}`) }]]
-        };
-        await sendTelegramRequest('sendMessage', { chat_id: chatId, text: msg, parse_mode: 'HTML', reply_markup: keyboard });
+    for (const message of messages) {
+        await sendTelegramRequest('sendMessage', { chat_id: chatId, ...message });
     }
 }
 
