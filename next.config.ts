@@ -36,6 +36,13 @@ const nextConfig: NextConfig = {
                 hostname: "eooenprtybhyamaeydkz.supabase.co",
                 pathname: "/storage/v1/object/public/**",
             },
+            {
+                protocol: "https",
+                hostname: "pvfugueebfqlxbelqpqp.supabase.co",
+                port: "",
+                pathname: "/storage/v1/object/public/pc-images/**",
+                search: "",
+            },
         ],
     },
     async redirects() {
