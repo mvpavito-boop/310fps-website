@@ -37,6 +37,32 @@ function ready(): CommerceDocument {
   return doc;
 }
 
+test("catalog read from JSONB can be saved after object keys are reordered", () => {
+  const original = createInitialCommerce().draft;
+  const reordered: CommerceDocument = JSON.parse(JSON.stringify(original, (_key, value) =>
+    value && typeof value === "object" && !Array.isArray(value)
+      ? Object.fromEntries(Object.entries(value).reverse())
+      : value,
+  ));
+  assert.deepEqual(reordered, original);
+  assert.notEqual(JSON.stringify(reordered.components[0].specs), JSON.stringify(original.components[0].specs));
+  assert.deepEqual(validateCommerce(reordered), []);
+});
+
+test("catalog validation still rejects altered, missing and extra component metadata", () => {
+  for (const change of ["value", "missing", "extra", "socket", "array"] as const) {
+    const doc = structuredClone(createInitialCommerce().draft);
+    const cpu = doc.components.find(c => c.id === "cpu-i5-12400f")!;
+    const field = Object.keys(cpu.specs)[0];
+    if (change === "value") cpu.specs[field] = "altered";
+    if (change === "missing") delete cpu.specs[field];
+    if (change === "extra") cpu.specs.extra = "altered";
+    if (change === "socket") cpu.socket = "AM5";
+    if (change === "array") cpu.tags = ["unexpected"];
+    assert(validateCommerce(doc).some(error => error.includes(cpu.id) && error.includes("характеристики")), change);
+  }
+});
+
 test("Numbers sheet aliases import unambiguously while exact Excel names keep priority", () => {
   assert.equal(resolveImportSheet(["Цены - Цены", "База - База"], "Цены"), "Цены - Цены");
   assert.equal(resolveImportSheet(["Сборки - Таблица 1"], "Сборки"), "Сборки - Таблица 1");

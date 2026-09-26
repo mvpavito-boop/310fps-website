@@ -179,6 +179,20 @@ function validCatalogImage(value: string): boolean {
 }
 
 /** Drafts may be incomplete. Publishing must never turn a missing price into zero. */
+// JSONB does not preserve object key order; array order and values still matter.
+function sameComponentValue(a: unknown, b: unknown): boolean {
+  if (a === b) return true;
+  if (!a || !b || typeof a !== "object" || typeof b !== "object") return false;
+  if (Array.isArray(a) || Array.isArray(b))
+    return Array.isArray(a) && Array.isArray(b) && a.length === b.length &&
+      a.every((value, index) => sameComponentValue(value, b[index]));
+  const left = a as Record<string, unknown>;
+  const right = b as Record<string, unknown>;
+  const keys = Object.keys(left);
+  return keys.length === Object.keys(right).length &&
+    keys.every(key => Object.hasOwn(right, key) && sameComponentValue(left[key], right[key]));
+}
+
 export function validateCommerce(
   doc: CommerceDocument,
   publishing = false,
@@ -260,8 +274,7 @@ export function validateCommerce(
         )
         .some(
           (k) =>
-            JSON.stringify(c[k as keyof PriceComponent]) !==
-            JSON.stringify(original[k as keyof PCComponent]),
+            !sameComponentValue(c[k as keyof PriceComponent], original[k as keyof PCComponent]),
         )
     )
       errors.push(
