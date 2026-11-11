@@ -5,6 +5,7 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { Icon } from "@/components/ui/lab-icons";
 import { ANALYTICS_GOALS, type AnalyticsGoal } from "@/lib/analytics";
+import { getOrderHref } from "@/lib/campaign-links";
 import { siteConfig } from "@/lib/site-config";
 
 interface PageCtaConfig {
@@ -30,7 +31,7 @@ function getPageConfig(pathname: string): PageCtaConfig {
 
     return {
         primaryLabel: "Заказать ПК",
-        primaryHref: "/#cta",
+        primaryHref: getOrderHref(pathname),
         primaryGoal: ANALYTICS_GOALS.mobileCtaPrimary,
         secondaryLabel: "Каталог",
         secondaryHref: "/catalog",

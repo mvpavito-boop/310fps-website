@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import { getOrderHref } from "@/lib/campaign-links";
 import { HEADER_NAV } from "@/lib/data/navigation";
 import { GlyphClose, GlyphMenu } from "@/components/ui/lab-icons";
 import { Logo } from "@/components/ui/primitives";
@@ -67,7 +68,7 @@ export function Header() {
 
                 <div className="hidden lg:block">
                     <Link
-                        href="/#cta"
+                        href={getOrderHref(pathname)}
                         data-analytics-goal="header_order_click"
                         className="inline-flex items-center gap-2 rounded-md border border-ember/40 bg-ember/10 px-5 py-2.5 font-display text-[11px] font-semibold uppercase tracking-[0.16em] text-flame transition-all duration-300 hover:bg-ember hover:text-white hover:shadow-ember"
                     >
@@ -107,7 +108,7 @@ export function Header() {
                         </Link>
                     ))}
                     <Link
-                        href="/#cta"
+                        href={getOrderHref(pathname)}
                         onClick={() => setOpen(false)}
                         data-analytics-goal="header_order_click"
                         className="mt-2 rounded-md bg-gradient-to-r from-ember to-[#D9A35C] px-3 py-3 text-center font-display text-xs font-semibold uppercase tracking-[0.16em] text-white"
